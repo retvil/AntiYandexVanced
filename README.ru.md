@@ -64,6 +64,20 @@ python main.py
 - **«Database locked» в результатах?** Во время чистки был запущен Chromium-браузер. Закройте все браузеры и повторите удаление.
 - **Как снять политику поиска?** Кнопка **Снять политику Яндекса** вычищает значения политик; в Firefox можно также удалить файл `distribution\policies.json`.
 
-## Автор
+## Автор и поддержка
 
 **Nod33Eset** — форк [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex). Issues и PR — приветствуются.
+
+Если инструмент избавил вас от Яндекса — можно поддержать разработку:
+
+**Крипта:**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## Лицензия
+
+MIT — см. [LICENSE](LICENSE).

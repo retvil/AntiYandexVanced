@@ -64,6 +64,20 @@ Eigenes EXE bauen: `build.bat` ausführen (PyInstaller, Ergebnis in `dist/`).
 - **„Database locked" in den Ergebnissen?** Während der Bereinigung lief ein Chromium-Browser. Alle Browser schließen und die Entfernung wiederholen.
 - **Wie entferne ich die Suchrichtlinie?** Die Schaltfläche **Yandex-Richtlinien entfernen** räumt die Richtlinienwerte weg; in Firefox kann man zusätzlich die Datei `distribution\policies.json` löschen.
 
-## Autor
+## Autor & Support
 
 **Nod33Eset** — Fork von [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex). Issues und PRs sind willkommen.
+
+Wenn dich das Tool von Yandex befreit hat, kannst du die Entwicklung unterstützen:
+
+**Krypto:**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## Lizenz
+
+MIT — siehe [LICENSE](LICENSE).

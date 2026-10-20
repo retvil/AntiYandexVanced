@@ -64,6 +64,20 @@ python main.py
 - **Нәтижелерде «Database locked»?** Тазарту кезінде Chromium браузері істе тұрған. Барлық браузерді жабып, жоюды қайталаңыз.
 - **Іздеу саясатын қалай алып тастауға болады?** **Саясатты қолдану**... **Яндекс саясатын алып тастау** батырмасы саясат мәндерін тазартады; Firefox-та `distribution\policies.json` файлын жоюға болады.
 
-## Автор
+## Автор және қолдау
 
 **Nod33Eset** — [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) форкі. Issues мен PR — қош келдіңіз.
+
+Егер құрал сізді Яндекстен құтқарса — дамуды қолдауға болады:
+
+**Крипта:**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## Лицензия
+
+MIT — қ. [LICENSE](LICENSE).

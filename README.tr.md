@@ -64,6 +64,20 @@ Kendi EXE'nizi derlemek için: `build.bat` çalıştırın (PyInstaller, çıkt�
 - **Sonuçlarda «Database locked»?** Temizlik sırasında bir Chromium tarayıcısı çalışıyordu. Tüm tarayıcıları kapatın ve kaldırmayı tekrarlayın.
 - **Arama politikasını nasıl kaldırırım?** **Yandex politikalarını kaldır** düğmesi politika değerlerini temizler; Firefox'ta ayrıca `distribution\policies.json` dosyasını silebilirsiniz.
 
-## Yazar
+## Yazar ve destek
 
 **Nod33Eset** — [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) çatalı. Issues ve PR'lara açığız.
+
+Araç sizi Yandex'ten kurtardıysa, geliştirmeyi destekleyebilirsiniz:
+
+**Kripto:**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## Lisans
+
+MIT — bkz. [LICENSE](LICENSE).

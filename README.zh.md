@@ -64,6 +64,20 @@ python main.py
 - **结果中出现「Database locked」？** 清理时有 Chromium 浏览器正在运行。关闭所有浏览器后重新执行删除。
 - **如何撤销搜索策略？** **移除 Yandex 策略**按钮会清除策略值；Firefox 用户还可以删除 `distribution\policies.json` 文件。
 
-## 作者
+## 作者与支持
 
 **Nod33Eset** — [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) 的 fork。欢迎提交 Issues 和 PR。
+
+如果这个工具帮你摆脱了 Yandex，可以支持一下开发：
+
+**加密货币：**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## 许可证
+
+MIT — 见 [LICENSE](LICENSE)。

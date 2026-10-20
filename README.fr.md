@@ -64,6 +64,20 @@ Compiler votre propre EXE : lancez `build.bat` (PyInstaller, résultat dans `dis
 - **« Database locked » dans les résultats ?** Un navigateur Chromium tournait pendant le nettoyage. Fermez tous les navigateurs et relancez la suppression.
 - **Comment retirer la politique de recherche ?** Le bouton **Supprimer les politiques Yandex** purge les valeurs ; dans Firefox, vous pouvez aussi supprimer le fichier `distribution\policies.json`.
 
-## Auteur
+## Auteur & support
 
 **Nod33Eset** — fork de [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex). Issues et PR bienvenues.
+
+Si l'outil t'a débarrassé de Yandex, tu peux soutenir le développement :
+
+**Crypto :**
+
+- BTC : `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON : `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20) : `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20) : `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL) : `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## Licence
+
+MIT — voir [LICENSE](LICENSE).

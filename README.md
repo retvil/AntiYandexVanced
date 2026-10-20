@@ -64,6 +64,20 @@ Build your own EXE: run `build.bat` (PyInstaller, output in `dist/`).
 - **"Database locked" in results?** A Chromium browser was running during cleanup. Close all browsers and run the removal again.
 - **How do I undo the search policy?** The **Remove Yandex Policies** button strips the policy values; Firefox users can also delete the `distribution\policies.json` file.
 
-## Author
+## Author & support
 
 **Nod33Eset** — fork of [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex). Issues and PRs are welcome.
+
+If the tool saved you from Yandex, you can support development:
+
+**Crypto:**
+
+- BTC: `bc1qunld3rsp37qf5gg69aune50y0qqkd0eugg7j97`
+- TON: `UQDmvr4SKOxSION3Yky6aOgzAnCDXySPuAbG4EKJa5JUT7tC`
+- USDT (TRC20): `TBPJSSLu1mUcX54g9UyxUohYGf2fuRvbwd`
+- USDT (ERC20): `0x25CAED3776Ef5b18E03392bC5b254Bbd78E8180C`
+- USDT (SOL): `3qgN5z291CEcj2FUi2Zza5DioxKgNw72kC7P52pCcTrG`
+
+## License
+
+MIT — see [LICENSE](LICENSE).
