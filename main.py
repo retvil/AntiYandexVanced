@@ -11,6 +11,7 @@ import winreg
 
 import backup
 import engines
+import exclusions
 import policies
 import translations
 import yandex_detect
@@ -139,17 +140,22 @@ def _render_findings(lines):
         findings_box.insert(tk.END, line + "\n")
     findings_box.configure(state=tk.DISABLED)
 
+last_findings: list[str] = []
+
 def scan_hijacks():
-    """Scan every known Yandex search-hijack vector and show findings."""
+    """Scan every known Yandex hijack vector, show findings, offer selection."""
     def task():
         run_in_ui(lambda: update_status(t("status_searching"), STATUS_COLORS["info"]))
         findings = yandex_detect.scan_all()
         def done():
+            global last_findings
+            last_findings = findings
             if findings:
                 _render_findings(
                     [t("hijack_found").format(len(findings))] + [f"•  {f}" for f in findings]
                 )
                 update_status(t("hijack_found").format(len(findings)), STATUS_COLORS["warn"])
+                _open_selection_dialog(findings)
             else:
                 _render_findings([t("hijack_clean")])
                 update_status(t("hijack_clean"), STATUS_COLORS["ok"])
@@ -176,37 +182,110 @@ def _kill_browsers() -> None:
             continue
 
 def remove_hijacks():
-    """Remove all detected hijack vectors after user confirmation."""
-    running = _running_browsers()
-    if running and not messagebox.askyesno(t("title"), t("close_browsers_confirm")):
+    """Open the selection dialog for the last scan results."""
+    if not last_findings:
+        scan_hijacks()
         return
-    if running:
-        _kill_browsers()
+    _open_selection_dialog(last_findings)
 
-    if not messagebox.askyesno(t("title"), t("hijack_remove_confirm")):
-        return
+def _remove_selected_task(selected: list[str]) -> None:
+    """Background removal of the user-selected findings + result reporting."""
+    removed, failed = yandex_detect.remove_selected(selected)
+    def done():
+        if removed:
+            update_status(t("hijack_removed").format(len(removed)), STATUS_COLORS["ok"])
+        else:
+            update_status(t("hijack_none"), STATUS_COLORS["info"])
+        if failed:
+            message = t("hijack_remove_fail").format("\n".join(failed))
+            if backup._session_dir is not None and any(backup._session_dir.rglob("*")):
+                message += "\n\n" + t("backup_done").format(path=backup.BASE_DIR)
+            messagebox.showwarning(t("title"), message)
+            if messagebox.askyesno(t("title"), t("open_log_ask")):
+                os.startfile(backup.BASE_DIR)
+        if removed:
+            messagebox.showinfo(t("title"), t("hijack_removed").format("\n".join(removed)))
+        elif not failed:
+            messagebox.showinfo(t("title"), t("hijack_none"))
+    run_in_ui(done)
+    run_in_ui(scan_hijacks)
 
-    def task():
-        removed, failed = yandex_detect.remove_all_hijacks()
-        def done():
-            if removed:
-                update_status(t("hijack_removed").format(len(removed)), STATUS_COLORS["ok"])
-            else:
-                update_status(t("hijack_none"), STATUS_COLORS["info"])
-            if failed:
-                message = t("hijack_remove_fail").format("\n".join(failed))
-                if backup._session_dir is not None and any(backup._session_dir.rglob("*")):
-                    message += "\n\n" + t("backup_done").format(path=backup.BASE_DIR)
-                messagebox.showwarning(t("title"), message)
-                if messagebox.askyesno(t("title"), t("open_log_ask")):
-                    os.startfile(backup.BASE_DIR)
-            if removed:
-                messagebox.showinfo(t("title"), t("hijack_removed").format("\n".join(removed)))
-            elif not failed:
-                messagebox.showinfo(t("title"), t("hijack_none"))
-        run_in_ui(done)
-        run_in_ui(scan_hijacks)
-    threading.Thread(target=task, daemon=True).start()
+def _open_selection_dialog(findings: list[str]) -> None:
+    """Modal dialog: pick findings to remove, manage exclusions."""
+    excluded = exclusions.load()
+    dialog = ttk.Toplevel(title=t("select_title"), size=(620, 520), minsize=(520, 420))
+    dialog.transient(root)
+    dialog.grab_set()
+
+    ttk.Label(
+        dialog, text=t("select_hint"), wraplength=580, justify="left",
+        font=("Segoe UI", 10), foreground=TEXT_MUTED, padding=(12, 10, 12, 6)
+    ).pack(fill="x")
+
+    # Scrollable checkbox list
+    outer = ttk.Frame(dialog)
+    outer.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+    canvas = tk.Canvas(outer, highlightthickness=0)
+    scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+    list_frame = ttk.Frame(canvas, padding=(4, 4, 16, 4))
+    list_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    canvas.create_window((0, 0), window=list_frame, anchor="nw", width=560)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    def _on_mousewheel(event):
+        canvas.yview_scroll(-1 * (event.delta // 120), "units")
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    vars_by_finding: dict[str, tk.BooleanVar] = {}
+    for finding in findings:
+        var = tk.BooleanVar(value=not exclusions.is_excluded(finding, excluded))
+        vars_by_finding[finding] = var
+        tk.Checkbutton(
+            list_frame, text=finding, variable=var, anchor="w", justify="left",
+            wraplength=520, font=("Segoe UI", 9), bg="#ffffff"
+        ).pack(fill="x", anchor="w", pady=1)
+
+    buttons = ttk.Frame(dialog, padding=(12, 4, 12, 12))
+    buttons.pack(fill="x", side="bottom")
+
+    def close():
+        canvas.unbind_all("<MouseWheel>")
+        dialog.destroy()
+
+    def on_remove():
+        selected = [f for f, var in vars_by_finding.items() if var.get()]
+        if not selected:
+            messagebox.showinfo(t("select_title"), t("select_none"), parent=dialog)
+            return
+        running = _running_browsers()
+        if running and not messagebox.askyesno(t("title"), t("close_browsers_confirm")):
+            return
+        if running:
+            _kill_browsers()
+        close()
+        threading.Thread(target=_remove_selected_task, args=(selected,), daemon=True).start()
+
+    def on_exclude():
+        unchecked = [f for f, var in vars_by_finding.items() if not var.get()]
+        for finding in unchecked:
+            exclusions.add(finding)
+        update_status(t("exclusions_saved").format(len(unchecked)), STATUS_COLORS["info"])
+
+    def on_reset():
+        exclusions.clear()
+        for var in vars_by_finding.values():
+            var.set(True)
+        update_status(t("exclusions_cleared"), STATUS_COLORS["info"])
+
+    ttk.Button(buttons, bootstyle="danger", text=t("select_remove_btn"), command=on_remove).pack(side="left", fill="x", expand=True, padx=(0, 6))
+    ttk.Button(buttons, bootstyle="secondary", text=t("select_exclude_btn"), command=on_exclude).pack(side="left", padx=(0, 6))
+    ttk.Button(buttons, bootstyle="secondary", text=t("select_reset_exclusions_btn"), command=on_reset).pack(side="left", padx=(0, 6))
+    ttk.Button(buttons, bootstyle="secondary", text=t("select_cancel_btn"), command=close).pack(side="left")
 
 def apply_search_policy():
     """Hard-enforce the selected engine in all Chromium browsers + Firefox."""

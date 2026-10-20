@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**Полное удаление Яндекс.Браузера и жёсткая защита поиска по умолчанию от захвата — 12 векторов детекта, 10 поисковиков, 10 языков интерфейса.**
+**Полное удаление Яндекс.Браузера и жёсткая защита поиска по умолчанию от захвата — 15 векторов детекта, 10 поисковиков, 10 языков интерфейса.**
 
 [🇬🇧 English](README.md) | **🇷🇺 Русский** | [🇺🇦 Українська](README.uk.md) | [🇰🇿 Қазақша](README.kk.md) | [🇩🇪 Deutsch](README.de.md) | [🇫🇷 Français](README.fr.md) | [🇪🇸 Español](README.es.md) | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | [🇨🇳 中文](README.zh.md)
 
@@ -10,11 +10,11 @@
 
 Яндекс ставит не просто браузер — он тихо прописывается поиском и браузером по умолчанию через десяток разных механизмов системы: ассоциации в реестре, enterprise-политики, настройки профилей браузеров, даже базы поисковиков внутри профилей Chromium. Удаление одного браузера этого не отменяет.
 
-**AntiYandex Vanced** (форк [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) находит **все 12 векторов захвата**, убирает их одной кнопкой, а затем **жёстко закрепляет поиск по умолчанию** за выбранным вами поисковиком через enterprise-политики Windows — чтобы ничего не могло тихо вернуть всё обратно.
+**AntiYandex Vanced** (форк [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) находит **все 15 векторов захвата**, убирает их одной кнопкой, а затем **жёстко закрепляет поиск по умолчанию** за выбранным вами поисковиком через enterprise-политики Windows — чтобы ничего не могло тихо вернуть всё обратно.
 
 ## Возможности
 
-- **Сканер захвата** — детект 12 векторов: пути установки, записи Uninstall в реестре, ассоциация `UserChoice`, регистрации `StartMenuInternet`, деревья ключей `Software\Yandex`, hijack через политики `DefaultSearchProvider*`, `Preferences` профилей Chromium, ключевые слова в `Web Data` (SQLite), `search.json.mozlz4` Firefox, legacy `SearchScopes`, автозапуск, планировщик задач
+- **Сканер захвата** — детект 15 векторов: пути установки, записи Uninstall в реестре, ассоциация `UserChoice`, регистрации `StartMenuInternet`, деревья ключей `Software\Yandex`, hijack через политики `DefaultSearchProvider*`, `Preferences` профилей Chromium, ключевые слова в `Web Data` (SQLite), `search.json.mozlz4` Firefox, legacy `SearchScopes`, автозапуск, планировщик задач, службы Windows, Punto Switcher, файловые ассоциации
 - **Удаление в один клик** — у каждого вектора свой remover; заблокированные базы честно репортятся, без крашей
 - **Жёсткая политика поиска** — закрепляет поиск за одним из 10 поисковиков (Google, Bing, DuckDuckGo, Brave Search, Startpage, Mojeek, Qwant, Ecosia, Yahoo, SearXNG) через HKLM-политики для Chrome, Edge, Brave, Vivaldi, Opera и Яндекс.Браузера + `policies.json` для Firefox/Waterfox
 - **Чистка политик** — вычищает значения `DefaultSearchProvider*` Яндекса из реестра

@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 13th–15th hijack vectors: Windows services (registry-based scan, `sc stop` +
+  `sc delete` removal), Punto Switcher (detection via the `punto` marker),
+  file associations (`FileExts\<ext>\UserChoice` ProgId scan + removal)
+- Selection dialog after scan: pick exactly which findings to remove instead
+  of all-or-nothing removal
+- Exclusions: unchecked findings can be saved to
+  `%APPDATA%\AntiYandexVanced\exclusions.json` — future scans deselect them
+  automatically, but they stay selectable in the dialog; exclusions can be
+  reset from the dialog
+- Unit tests for exclusions persistence and the Punto Switcher marker
+
 ## [2.2.0] - 2026-10-20
 
 ### Added

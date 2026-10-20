@@ -104,7 +104,7 @@ def test_lz4_decompress_corrupt_offset_raises():
 # --- markers -------------------------------------------------------------------
 
 def test_is_yandex_positive_markers():
-    for text in ("Yandex Browser", "яндекс", "https://ya.ru/search", "yandex.ru"):
+    for text in ("Yandex Browser", "яндекс", "https://ya.ru/search", "yandex.ru", "Punto Switcher"):
         assert yandex_detect._is_yandex(text)
 
 
@@ -124,3 +124,25 @@ def test_scan_scheduled_tasks_handles_missing_schtasks(monkeypatch):
         raise FileNotFoundError("schtasks")
     monkeypatch.setattr(yandex_detect.subprocess, "run", boom)
     assert yandex_detect.scan_scheduled_tasks() == []
+
+
+# --- exclusions ----------------------------------------------------------------
+
+def test_exclusions_roundtrip(tmp_path, monkeypatch):
+    import exclusions
+    monkeypatch.setattr(exclusions, "EXCLUSIONS_FILE", tmp_path / "exclusions.json")
+    monkeypatch.setattr(exclusions, "BASE_DIR", tmp_path)
+    assert exclusions.load() == set()
+    exclusions.add("Service: YandexUpdaterService (Yandex Updater)")
+    assert exclusions.is_excluded("Service: YandexUpdaterService (Yandex Updater)")
+    assert not exclusions.is_excluded("Scheduled task: YandexBrowserUpdate")
+    exclusions.clear()
+    assert exclusions.load() == set()
+
+
+def test_exclusions_load_corrupt_file_returns_empty(tmp_path, monkeypatch):
+    import exclusions
+    bad = tmp_path / "exclusions.json"
+    bad.write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr(exclusions, "EXCLUSIONS_FILE", bad)
+    assert exclusions.load() == set()

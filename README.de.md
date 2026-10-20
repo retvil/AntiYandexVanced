@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**Yandex Browser vollständig entfernen und die Standardsuche hart gegen Entführung sichern — 12 Erkennungsvektoren, 10 Suchmaschinen, 10 UI-Sprachen.**
+**Yandex Browser vollständig entfernen und die Standardsuche hart gegen Entführung sichern — 15 Erkennungsvektoren, 10 Suchmaschinen, 10 UI-Sprachen.**
 
 [🇬🇧 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇰🇿 Қазақша](README.kk.md) | **🇩🇪 Deutsch** | [🇫🇷 Français](README.fr.md) | [🇪🇸 Español](README.es.md) | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | [🇨🇳 中文](README.zh.md)
 
@@ -10,11 +10,11 @@
 
 Yandex installiert nicht nur einen Browser — es trägt sich still über ein Dutzend Systemmechanismen als Standardsuche und Standardbrowser ein: Registry-Assoziationen, Enterprise-Richtlinien, Profileinstellungen von Browsern, sogar Suchmaschinen-Datenbanken in Chromium-Profilen. Allein das Entfernen des Browsers macht das nicht rückgängig.
 
-**AntiYandex Vanced** (ein Fork von [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) findet **alle 12 Hijack-Vektoren**, entfernt sie mit einem Klick und **verriegelt dann Ihre Standardsuche** hart auf eine von Ihnen gewählte Suchmaschine über Windows-Enterprise-Richtlinien — damit nichts sie laut zurückholen kann.
+**AntiYandex Vanced** (ein Fork von [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) findet **alle 15 Hijack-Vektoren**, entfernt sie mit einem Klick und **verriegelt dann Ihre Standardsuche** hart auf eine von Ihnen gewählte Suchmaschine über Windows-Enterprise-Richtlinien — damit nichts sie laut zurückholen kann.
 
 ## Funktionen
 
-- **Hijack-Scanner** — erkennt 12 Vektoren: Installationspfade, Uninstall-Registry-Einträge, `UserChoice`-Assoziation, `StartMenuInternet`-Registrierungen, `Software\Yandex`-Schlüsselbäume, Hijack über `DefaultSearchProvider*`-Richtlinien, Chromium-Profil-`Preferences`, Schlüsselwörter in `Web Data` (SQLite), Firefox `search.json.mozlz4`, Legacy-`SearchScopes`, Autostart-Einträge, geplante Aufgaben
+- **Hijack-Scanner** — erkennt 15 Vektoren: Installationspfade, Uninstall-Registry-Einträge, `UserChoice`-Assoziation, `StartMenuInternet`-Registrierungen, `Software\Yandex`-Schlüsselbäume, Hijack über `DefaultSearchProvider*`-Richtlinien, Chromium-Profil-`Preferences`, Schlüsselwörter in `Web Data` (SQLite), Firefox `search.json.mozlz4`, Legacy-`SearchScopes`, Autostart-Einträge, geplante Aufgaben, Windows-Dienste, Punto Switcher, Dateizuordnungen
 - **Entfernung mit einem Klick** — jeder Vektor hat seinen eigenen Remover; gesperrte Datenbanken werden ehrlich gemeldet, ohne Abstürze
 - **Harte Suchrichtlinie** — verriegelt die Standardsuche auf eine von 10 Suchmaschinen (Google, Bing, DuckDuckGo, Brave Search, Startpage, Mojeek, Qwant, Ecosia, Yahoo, SearXNG) über HKLM-Richtlinien für Chrome, Edge, Brave, Vivaldi, Opera und Yandex Browser + `policies.json` für Firefox/Waterfox
 - **Richtlinien-Bereinigung** — entfernt Yandex-`DefaultSearchProvider*`-Werte aus der Registry

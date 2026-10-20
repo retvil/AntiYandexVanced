@@ -17,7 +17,7 @@ from pathlib import Path
 
 import backup
 
-YANDEX_MARKERS: tuple[str, ...] = ("yandex", "яндекс", "ya.ru", "yandex.ru")
+YANDEX_MARKERS: tuple[str, ...] = ("yandex", "яндекс", "ya.ru", "yandex.ru", "punto")
 
 YANDEX_PATHS: tuple[str, ...] = (
     r"C:\Program Files (x86)\Yandex\YandexBrowser",
@@ -357,6 +357,63 @@ def scan_scheduled_tasks() -> list[str]:
     return found
 
 
+SERVICES_KEY = r"SYSTEM\CurrentControlSet\Services"
+
+
+def scan_services() -> list[str]:
+    """Windows services whose name, display name or binary path mentions Yandex.
+
+    Reads the registry directly (fast, no subprocess per service).
+    """
+    found = []
+    for service_name in _reg_enum_subkey_names(winreg.HKEY_LOCAL_MACHINE, SERVICES_KEY):
+        key_path = f"{SERVICES_KEY}\\{service_name}"
+        display = _reg_get_string(winreg.HKEY_LOCAL_MACHINE, key_path, "DisplayName") or ""
+        image_path = _reg_get_string(winreg.HKEY_LOCAL_MACHINE, key_path, "ImagePath") or ""
+        if _is_yandex(f"{service_name} {display} {image_path}"):
+            found.append(f"Service: {service_name} ({display or service_name})")
+    return found
+
+
+def remove_service(service_name: str) -> bool:
+    """Stop and delete a Windows service (registry key exported first)."""
+    backup.export_key(winreg.HKEY_LOCAL_MACHINE, f"{SERVICES_KEY}\\{service_name}")
+    try:
+        subprocess.run(["sc", "stop", service_name], capture_output=True, timeout=60)
+        proc = subprocess.run(
+            ["sc", "delete", service_name], capture_output=True, timeout=60
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0
+
+
+FILE_EXTS_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
+
+
+def scan_file_associations() -> list[str]:
+    """File extensions whose default app (UserChoice ProgId) is Yandex Browser."""
+    found = []
+    for ext in _reg_enum_subkey_names(winreg.HKEY_CURRENT_USER, FILE_EXTS_KEY):
+        prog_id = _reg_get_string(
+            winreg.HKEY_CURRENT_USER, f"{FILE_EXTS_KEY}\\{ext}\\UserChoice", "ProgId"
+        )
+        if prog_id and _is_yandex(prog_id):
+            found.append(f"File association: {ext} -> {prog_id}")
+    return found
+
+
+def remove_file_association(ext: str) -> bool:
+    """Delete the UserChoice key for one extension (exported first)."""
+    user_choice = f"{FILE_EXTS_KEY}\\{ext}\\UserChoice"
+    backup.export_key(winreg.HKEY_CURRENT_USER, user_choice)
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, user_choice)
+        return True
+    except OSError:
+        return False
+
+
 def scan_all() -> list[str]:
     """Run every detection vector and return combined findings."""
     findings: list[str] = []
@@ -372,6 +429,8 @@ def scan_all() -> list[str]:
     findings += scan_search_scopes()
     findings += scan_autostart()
     findings += scan_scheduled_tasks()
+    findings += scan_services()
+    findings += scan_file_associations()
     return findings
 
 
@@ -690,30 +749,241 @@ def remove_all_hijacks() -> tuple[list[str], list[str]]:
     Returns:
         (removed, failed) combined lists across all vectors.
     """
+    return remove_selected(scan_all())
+
+
+# --- Per-item removal (selection dialog) ----------------------------------------
+# Every finding string from scan_all() can be removed individually.
+
+_HIVES = (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER)
+
+
+def _delete_tree_any_hive(rel_path: str) -> bool:
+    """Delete a registry key tree from whichever hive contains it."""
+    for hive in _HIVES:
+        try:
+            winreg.OpenKey(hive, rel_path, 0, winreg.KEY_READ)
+        except OSError:
+            continue
+        backup.export_key(hive, rel_path)
+        _reg_delete_tree(hive, rel_path)
+        return True
+    return False
+
+
+def _delete_value_any_hive(rel_path: str, value_name: str) -> bool:
+    """Delete one registry value from whichever hive contains the key."""
+    for hive in _HIVES:
+        try:
+            winreg.OpenKey(hive, rel_path, 0, winreg.KEY_READ)
+        except OSError:
+            continue
+        backup.export_key(hive, rel_path)
+        try:
+            with winreg.OpenKey(hive, rel_path, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, value_name)
+            return True
+        except OSError:
+            return False
+    return False
+
+
+def _clean_profile_preferences(browser: str, rel: str, profile_name: str) -> str:
+    """Strip Yandex default-search data from one Chromium profile.
+
+    Raises:
+        OSError: if the Preferences file cannot be rewritten (browser running).
+    """
+    prefs_file = Path(os.environ.get("LOCALAPPDATA", "")) / rel / profile_name / "Preferences"
+    prefs = json.loads(prefs_file.read_text(encoding="utf-8"))
+    data = prefs.get("default_search_provider_data", {}).get("template_url_data", {})
+    haystack = f"{data.get('short_name', '')} {data.get('url', '')} {data.get('keyword', '')}"
+    if not _is_yandex(haystack):
+        return ""
+    backup.copy_file(prefs_file)
+    del prefs["default_search_provider_data"]
+    prefs_file.write_text(json.dumps(prefs), encoding="utf-8")
+    return f"{browser} [{profile_name}]"
+
+
+def _clean_profile_web_data(browser: str, rel: str, profile_name: str) -> str:
+    """Delete Yandex keyword rows from one Chromium profile's Web Data.
+
+    Raises:
+        sqlite3.Error: if the database is locked (browser running).
+    """
+    web_data = Path(os.environ.get("LOCALAPPDATA", "")) / rel / profile_name / "Web Data"
+    conn = sqlite3.connect(web_data)
+    try:
+        rows = conn.execute("SELECT rowid, short_name, url FROM keywords").fetchall()
+        yandex_rowids = [
+            rowid for rowid, short_name, url in rows if _is_yandex(f"{short_name} {url}")
+        ]
+        if not yandex_rowids:
+            return ""
+        backup.copy_file(web_data)
+        conn.executemany(
+            "DELETE FROM keywords WHERE rowid = ?", [(rowid,) for rowid in yandex_rowids]
+        )
+        conn.commit()
+        return f"{browser} [{profile_name}] ({len(yandex_rowids)} rows)"
+    finally:
+        conn.close()
+
+
+def _remove_firefox_profile(profile_name: str) -> str:
+    """Delete search.json.mozlz4 in one Firefox/Waterfox profile.
+
+    Raises:
+        OSError: if the file cannot be deleted (browser running).
+    """
+    for profiles_root in (
+        Path(os.environ.get("APPDATA", "")) / "Mozilla" / "Firefox" / "Profiles",
+        Path(os.environ.get("APPDATA", "")) / "Waterfox" / "Profiles",
+    ):
+        mozlz4 = profiles_root / profile_name / "search.json.mozlz4"
+        if mozlz4.is_file():
+            backup.copy_file(mozlz4)
+            mozlz4.unlink()
+            return f"Firefox [{profile_name}]"
+    return ""
+
+
+def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
+    """Remove a single finding; append a description to removed or failed."""
+    if finding.startswith("Install path: "):
+        target = finding[len("Install path: "):]
+        try:
+            shutil.rmtree(target, ignore_errors=False)
+            removed.append(target)
+        except OSError:
+            failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith("Service: "):
+        service_name = finding[len("Service: "):].split(" (", 1)[0]
+        if remove_service(service_name):
+            removed.append(service_name)
+        else:
+            failed.append(f"{service_name} (admin required?)")
+        return
+
+    if finding.startswith("File association: "):
+        ext = finding[len("File association: "):].split(" -> ", 1)[0]
+        if remove_file_association(ext):
+            removed.append(ext)
+        else:
+            failed.append(ext)
+        return
+
+    if finding.startswith("Scheduled task: "):
+        task_name = finding[len("Scheduled task: "):]
+        backup.save_task_xml(task_name)
+        try:
+            proc = subprocess.run(
+                ["schtasks", "/delete", "/tn", task_name, "/f"],
+                capture_output=True, timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError):
+            failed.append(task_name)
+            return
+        (removed if proc.returncode == 0 else failed).append(task_name)
+        return
+
+    if finding.startswith("Default browser ("):
+        protocol = finding.split("(", 1)[1].split(")", 1)[0]
+        user_choice = (
+            r"Software\Microsoft\Windows\Shell\Associations"
+            f"\\UrlAssociations\\{protocol}\\UserChoice"
+        )
+        if _delete_tree_any_hive(user_choice):
+            removed.append(f"{protocol} UserChoice")
+        else:
+            failed.append(f"{protocol} UserChoice")
+        return
+
+    if finding.startswith("Policy hijack: "):
+        left = finding[len("Policy hijack: "):].split(" = ", 1)[0]
+        rel_path, value_name = left.rsplit("\\", 1)
+        if _delete_value_any_hive(rel_path, value_name):
+            removed.append(left)
+        else:
+            failed.append(left)
+        return
+
+    if finding.startswith("SearchScopes\\"):
+        subkey = finding.split("SearchScopes\\", 1)[1].split(" -> ", 1)[0]
+        rel_path = r"Software\Microsoft\Internet Explorer\SearchScopes"
+        try:
+            backup.export_key(winreg.HKEY_CURRENT_USER, f"{rel_path}\\{subkey}")
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, f"{rel_path}\\{subkey}")
+            removed.append(f"SearchScopes\\{subkey}")
+        except OSError:
+            failed.append(f"SearchScopes\\{subkey}")
+        return
+
+    if " [" in finding and "]: " in finding:
+        # Chromium profile findings: "<browser> [<profile>]: <detail>"
+        browser, rest = finding.split(" [", 1)
+        profile_name, detail = rest.split("]: ", 1)
+        rel = CHROMIUM_BROWSERS.get(browser)
+        try:
+            if rel is not None:
+                if detail.startswith("keyword"):
+                    result = _clean_profile_web_data(browser, rel, profile_name)
+                else:
+                    result = _clean_profile_preferences(browser, rel, profile_name)
+            else:
+                result = _remove_firefox_profile(profile_name)
+            if result:
+                removed.append(result)
+            else:
+                failed.append(finding)
+        except (OSError, sqlite3.Error, json.JSONDecodeError, KeyError):
+            failed.append(f"{finding} (browser running?)")
+        return
+
+    if " (DisplayName=" in finding:
+        # Uninstall entries: "<reg path>\\<subkey> (DisplayName=...)"
+        rel_path = finding.split(" (DisplayName=", 1)[0]
+        if _delete_tree_any_hive(rel_path):
+            removed.append(rel_path)
+        else:
+            failed.append(rel_path)
+        return
+
+    if " = " in finding:
+        # Autostart Run/RunOnce values: "<reg path>\\<name> = <value>"
+        left = finding.split(" = ", 1)[0]
+        rel_path, value_name = left.rsplit("\\", 1)
+        if _delete_value_any_hive(rel_path, value_name):
+            removed.append(left)
+        else:
+            failed.append(left)
+        return
+
+    # Plain registry paths: StartMenuInternet clients, Software\Yandex trees
+    if _delete_tree_any_hive(finding):
+        removed.append(finding)
+    else:
+        failed.append(finding)
+
+
+def remove_selected(selected: list[str]) -> tuple[list[str], list[str]]:
+    """Remove exactly the findings the user selected in the dialog.
+
+    A backup session is opened first; every key/file touched is exported
+    into it before deletion.
+
+    Returns:
+        (removed, failed) lists of human-readable descriptions.
+    """
     backup.start_session()
     removed: list[str] = []
     failed: list[str] = []
-    for remover in (
-        remove_uninstall_entries,
-        remove_default_browser_assoc,
-        remove_start_menu_internet,
-        remove_yandex_software_keys,
-        remove_policy_hijack,
-        remove_chromium_profile_search,
-        remove_web_data_keywords,
-        remove_firefox_yandex,
-        remove_search_scopes,
-        remove_autostart,
-        remove_scheduled_tasks,
-    ):
-        part_removed, part_failed = remover()
-        removed += part_removed
-        failed += part_failed
+    for finding in selected:
+        _remove_one(finding, removed, failed)
     backup.log_action(
-        f"remove_all_hijacks: removed={len(removed)} failed={len(failed)}"
+        f"remove_selected: {len(selected)} selected, removed={len(removed)} failed={len(failed)}"
     )
-    for item in removed:
-        backup.log_action(f"  removed: {item}")
-    for item in failed:
-        backup.log_action(f"  FAILED: {item}")
     return removed, failed
