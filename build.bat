@@ -13,12 +13,12 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-echo [1/3] Проверка зависимостей (psutil, pyinstaller)...
+echo [1/3] Проверка зависимостей (psutil, ttkbootstrap, pyinstaller)...
 python -m pip install --upgrade pip >nul
-python -m pip install psutil pyinstaller >nul
+python -m pip install psutil ttkbootstrap pyinstaller >nul
 
 echo [2/3] Сборка EXE...
-python -m PyInstaller --onefile --windowed --hidden-import=psutil --icon=icon.ico main.py
+python -m PyInstaller --onefile --windowed --hidden-import=psutil --collect-all ttkbootstrap --icon=logo.ico --add-data "logo.ico;." main.py
 
 if %errorlevel% equ 0 (
     echo ===========================================

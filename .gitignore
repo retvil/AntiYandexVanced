@@ -9,3 +9,4 @@ venv/
 Thumbs.db
 Desktop.ini
 *.log
+build_temp/
