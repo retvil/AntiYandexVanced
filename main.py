@@ -282,10 +282,22 @@ footer_label.pack(side="right", padx=(0, 4))
 
 # Status bar: packed second (above footer) so it also survives window resize
 status_label = ttk.Label(
-    root, font=("Segoe UI", 10), wraplength=400, justify="center",
+    root, font=("Segoe UI", 10), justify="center",
     anchor="center", padding=(20, 8, 20, 6)
 )
 status_label.pack(side="bottom", fill="x")
+
+def _retune_wraplength(event=None):
+    """Keep the status text wrapping inside the window at any width."""
+    width = status_label.winfo_width()
+    if width > 1:
+        new_wrap = max(120, width - 40)
+        # only reconfigure on actual change — otherwise this Configure
+        # handler feeds its own event loop and the window never settles
+        if status_label.cget("wraplength") != new_wrap:
+            status_label.configure(wraplength=new_wrap)
+
+root.bind("<Configure>", _retune_wraplength)
 
 # Policy section card: pinned above the status bar, survives window resize
 policy_card = ttk.Labelframe(root, text=t("policy_section"), padding=(16, 8, 16, 12))
@@ -348,22 +360,22 @@ btn_kill = ttk.Button(actions, bootstyle="info", command=kill_yandex_processes)
 btn_kill.pack(fill="x", pady=2)
 
 btn_delete = ttk.Button(actions, bootstyle="danger", command=uninstall_yandex_browser)
-btn_delete.pack(fill="x", pady=(2, 8))
+btn_delete.pack(fill="x", pady=(2, 6))
 
 # Hijack section card: pinned above the policy card, survives window resize
 hijack_card = ttk.Labelframe(root, text=t("hijack_section"), padding=(16, 8, 16, 12))
 hijack_card.pack(side="bottom", fill="x", padx=20, pady=(6, 4))
 
 btn_hijack = ttk.Button(hijack_card, bootstyle="info", command=scan_hijacks)
-btn_hijack.pack(fill="x", pady=(2, 8))
+btn_hijack.pack(fill="x", pady=(2, 6))
 
 findings_box = tk.Text(
-    hijack_card, height=4, wrap="word", font=("Consolas", 10),
+    hijack_card, height=3, wrap="word", font=("Consolas", 10),
     relief="flat", background="#f8fafc", foreground="#1f2937",
     borderwidth=0, highlightthickness=1, highlightbackground="#e2e8f0",
     padx=8, pady=6
 )
-findings_box.pack(fill="x", pady=(0, 8))
+findings_box.pack(fill="x", pady=(0, 6))
 findings_box.configure(state=tk.DISABLED)
 
 btn_hijack_remove = ttk.Button(hijack_card, bootstyle="warning", command=remove_hijacks)
