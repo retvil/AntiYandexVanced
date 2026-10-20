@@ -85,20 +85,20 @@ def apply_chromium(engine: SearchEngine, browsers: list[str]) -> tuple[list[str]
 
 def _firefox_policies_json(engine: SearchEngine) -> dict:
     """Build a Firefox policies.json document for the engine."""
+    engine_entry: dict = {
+        "Name": engine.name,
+        "Alias": engine.keyword,
+        "URLTemplate": engine.search_url,
+    }
+    if engine.suggest_url:
+        engine_entry["SuggestURLTemplate"] = engine.suggest_url
     return {
         "policies": {
             "SearchEngines": {
                 "Default": engine.name,
                 "PreventSearchEngineInstall": True,
                 "LockDefaultSearchEngine": True,
-                "Add": [
-                    {
-                        "Name": engine.name,
-                        "Alias": engine.keyword,
-                        "URLTemplate": engine.search_url,
-                        "SuggestURLTemplate": engine.suggest_url or None,
-                    }
-                ],
+                "Add": [engine_entry],
             },
             "DisableTelemetry": True,
         }
@@ -115,6 +115,8 @@ def apply_firefox(engine: SearchEngine) -> tuple[list[str], list[str]]:
     failed: list[str] = []
     document = _firefox_policies_json(engine)
     for root in FIREFOX_INSTALL_ROOTS:
+        if not os.path.isdir(root):
+            continue  # browser not installed — don't litter Program Files
         dist_dir = os.path.join(root, "distribution")
         policies_file = os.path.join(dist_dir, "policies.json")
         try:
@@ -130,35 +132,41 @@ def apply_firefox(engine: SearchEngine) -> tuple[list[str], list[str]]:
 def remove_yandex_search_policies() -> list[str]:
     """Delete DefaultSearchProvider* policy values that point to Yandex.
 
+    Checks both HKLM (machine) and HKCU (per-user) policy keys.
+
     Returns:
-        List of cleaned policy paths.
+        List of cleaned policy paths (hive-prefixed).
     """
     cleaned: list[str] = []
-    for policy_path in CHROMIUM_POLICY_PATHS.values():
-        try:
-            with winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE, policy_path, 0, winreg.KEY_ALL_ACCESS
-            ) as key:
-                names_to_delete = []
-                i = 0
-                while True:
-                    try:
-                        name, value, _ = winreg.EnumValue(key, i)
-                        i += 1
-                        if name.startswith("DefaultSearchProvider") and isinstance(value, str):
-                            lowered = value.lower()
-                            if "yandex" in lowered or "ya.ru" in lowered:
-                                names_to_delete.append(name)
-                    except OSError:
-                        break
-            if not names_to_delete:
+    for hive, hive_name in (
+        (winreg.HKEY_LOCAL_MACHINE, "HKLM"),
+        (winreg.HKEY_CURRENT_USER, "HKCU"),
+    ):
+        for policy_path in CHROMIUM_POLICY_PATHS.values():
+            try:
+                with winreg.OpenKey(
+                    hive, policy_path, 0, winreg.KEY_ALL_ACCESS
+                ) as key:
+                    names_to_delete = []
+                    i = 0
+                    while True:
+                        try:
+                            name, value, _ = winreg.EnumValue(key, i)
+                            i += 1
+                            if name.startswith("DefaultSearchProvider") and isinstance(value, str):
+                                lowered = value.lower()
+                                if "yandex" in lowered or "ya.ru" in lowered:
+                                    names_to_delete.append(name)
+                        except OSError:
+                            break
+                if not names_to_delete:
+                    continue
+                with winreg.OpenKey(
+                    hive, policy_path, 0, winreg.KEY_SET_VALUE
+                ) as key:
+                    for name in names_to_delete:
+                        winreg.DeleteValue(key, name)
+                cleaned.append(f"{hive_name}\\{policy_path}")
+            except OSError:
                 continue
-            with winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE, policy_path, 0, winreg.KEY_SET_VALUE
-            ) as key:
-                for name in names_to_delete:
-                    winreg.DeleteValue(key, name)
-            cleaned.append(policy_path)
-        except OSError:
-            continue
     return cleaned

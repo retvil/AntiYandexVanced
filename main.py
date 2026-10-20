@@ -1,7 +1,7 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
 from tkinter import messagebox
+import ctypes
 import os
 import shutil
 import psutil
@@ -9,6 +9,7 @@ import threading
 import webbrowser
 import winreg
 
+import backup
 import engines
 import policies
 import translations
@@ -22,8 +23,6 @@ language = translations.detect_system_language()
 
 YANDEX_PATHS = yandex_detect.YANDEX_PATHS
 
-found_path = None
-
 TEXT_MUTED = "#6b7280"
 STATUS_COLORS = {
     "ok": "#15803d",
@@ -32,29 +31,31 @@ STATUS_COLORS = {
     "bad": "#b91c1c",
 }
 
+# Browser processes that lock profile databases during hijack removal
+BROWSER_PROCESSES = {
+    "chrome.exe", "msedge.exe", "brave.exe", "vivaldi.exe", "opera.exe",
+    "firefox.exe", "waterfox.exe", "browser.exe",
+}
+
 def t(key):
     return translations.t(language, key)
+
+def is_admin() -> bool:
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except OSError:
+        return False
 
 def update_status(status, color=STATUS_COLORS["info"]):
     status_label.configure(text=status, foreground=color)
 
-def check_registry_for_yandex():
-    found_in_reg = False
-    try:
-        path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path) as key:
-            for i in range(winreg.QueryInfoKey(key)[0]):
-                try:
-                    subkey_name = winreg.EnumKey(key, i)
-                    with winreg.OpenKey(key, subkey_name) as subkey:
-                        name = winreg.QueryValueEx(subkey, "DisplayName")[0]
-                        if "Yandex" in name or "Яндекс" in name:
-                            found_in_reg = True
-                            break
-                except: continue
-    except: pass
+def run_in_ui(fn):
+    """Run a UI-touching callable on the main thread (tkinter is not thread-safe)."""
+    root.after(0, fn)
 
-    if found_in_reg:
+def check_registry_for_yandex():
+    found = yandex_detect.scan_uninstall_entries()
+    if found:
         update_status(t("reg_found"), STATUS_COLORS["ok"])
         messagebox.showinfo(t("title"), t("reg_found"))
     else:
@@ -79,16 +80,15 @@ def kill_yandex_processes():
 
 def check_yandex_browser():
     def task():
-        update_status(t("status_searching"), STATUS_COLORS["info"])
+        run_in_ui(lambda: update_status(t("status_searching"), STATUS_COLORS["info"]))
         hits = [p for p in YANDEX_PATHS if os.path.exists(p)]
         if hits:
-            update_status(t("status_found").format(hits[0]), STATUS_COLORS["ok"])
+            run_in_ui(lambda: update_status(t("status_found").format(hits[0]), STATUS_COLORS["ok"]))
         else:
-            update_status(t("status_not_found"), STATUS_COLORS["bad"])
+            run_in_ui(lambda: update_status(t("status_not_found"), STATUS_COLORS["bad"]))
     threading.Thread(target=task, daemon=True).start()
 
 def uninstall_yandex_browser():
-    global found_path
     hits = [p for p in YANDEX_PATHS if os.path.exists(p)]
     if not hits:
         messagebox.showwarning(t("title"), t("delete_first"))
@@ -96,26 +96,43 @@ def uninstall_yandex_browser():
     target = hits[0]
 
     def task():
-        global found_path
         try:
-            shutil.rmtree(target, ignore_errors=True)
-            if not os.path.exists(target):
-                yandex_detect.remove_uninstall_entries()
+            shutil.rmtree(target, ignore_errors=False)
+        except shutil.Error as exc:
+            locked = "; ".join(str(f) for f in getattr(exc, "args", ())[:3])
+            def fail_locked():
+                update_status(t("delete_fail"), STATUS_COLORS["bad"])
+                messagebox.showerror(t("title"), f"{t('delete_fail')}\n{locked}")
+            run_in_ui(fail_locked)
+            return
+        except PermissionError:
+            def fail_admin():
+                update_status(t("delete_fail"), STATUS_COLORS["bad"])
+                messagebox.showerror(t("title"), t("delete_fail_admin"))
+            run_in_ui(fail_admin)
+            return
+        except OSError as exc:
+            def fail_other():
+                update_status(t("delete_fail"), STATUS_COLORS["bad"])
+                messagebox.showerror(t("title"), f"{t('delete_fail')}\nError: {exc}")
+            run_in_ui(fail_other)
+            return
+        if not os.path.exists(target):
+            yandex_detect.remove_uninstall_entries()
+            backup.log_action(f"uninstall_yandex_browser: removed {target}")
+            def done():
                 update_status(t("delete_success"), STATUS_COLORS["ok"])
                 messagebox.showinfo(t("title"), t("delete_success"))
-                found_path = None
-            else:
-                raise Exception("Files locked")
-        except PermissionError:
-            update_status(t("delete_fail"), STATUS_COLORS["bad"])
-            messagebox.showerror(t("title"), "Запустите программу от имени администратора для удаления записей реестра")
-        except Exception as e:
-            update_status(t("delete_fail"), STATUS_COLORS["bad"])
-            messagebox.showerror(t("title"), f"{t('delete_fail')}\nError: {e}")
+            run_in_ui(done)
+        else:
+            def fail_locked2():
+                update_status(t("delete_fail"), STATUS_COLORS["bad"])
+                messagebox.showerror(t("title"), f"{t('delete_fail')}\nFiles locked")
+            run_in_ui(fail_locked2)
 
     threading.Thread(target=task, daemon=True).start()
 
-def _render_findings(lines, color):
+def _render_findings(lines):
     findings_box.configure(state=tk.NORMAL)
     findings_box.delete("1.0", tk.END)
     for line in lines:
@@ -125,65 +142,109 @@ def _render_findings(lines, color):
 def scan_hijacks():
     """Scan every known Yandex search-hijack vector and show findings."""
     def task():
-        update_status(t("status_searching"), STATUS_COLORS["info"])
+        run_in_ui(lambda: update_status(t("status_searching"), STATUS_COLORS["info"]))
         findings = yandex_detect.scan_all()
-        if findings:
-            _render_findings(
-                [t("hijack_found").format(len(findings))] + [f"•  {f}" for f in findings],
-                "#1f2937"
-            )
-            update_status(t("hijack_found").format(len(findings)), STATUS_COLORS["warn"])
-        else:
-            _render_findings([t("hijack_clean")], STATUS_COLORS["ok"])
-            update_status(t("hijack_clean"), STATUS_COLORS["ok"])
+        def done():
+            if findings:
+                _render_findings(
+                    [t("hijack_found").format(len(findings))] + [f"•  {f}" for f in findings]
+                )
+                update_status(t("hijack_found").format(len(findings)), STATUS_COLORS["warn"])
+            else:
+                _render_findings([t("hijack_clean")])
+                update_status(t("hijack_clean"), STATUS_COLORS["ok"])
+        run_in_ui(done)
     threading.Thread(target=task, daemon=True).start()
+
+def _running_browsers() -> list[str]:
+    names = set()
+    for proc in psutil.process_iter(['name']):
+        try:
+            name = (proc.info['name'] or "").lower()
+            if name in BROWSER_PROCESSES:
+                names.add(name)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return sorted(names)
+
+def _kill_browsers() -> None:
+    for proc in psutil.process_iter(['name']):
+        try:
+            if (proc.info['name'] or "").lower() in BROWSER_PROCESSES:
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
 
 def remove_hijacks():
     """Remove all detected hijack vectors after user confirmation."""
+    running = _running_browsers()
+    if running and not messagebox.askyesno(t("title"), t("close_browsers_confirm")):
+        return
+    if running:
+        _kill_browsers()
+
     if not messagebox.askyesno(t("title"), t("hijack_remove_confirm")):
         return
 
     def task():
         removed, failed = yandex_detect.remove_all_hijacks()
-        if removed:
-            update_status(t("hijack_removed").format(len(removed)), STATUS_COLORS["ok"])
-        else:
-            update_status(t("hijack_none"), STATUS_COLORS["info"])
-        if failed:
-            messagebox.showwarning(t("title"), t("hijack_remove_fail").format("\n".join(failed)))
-        if removed:
-            messagebox.showinfo(t("title"), t("hijack_removed").format("\n".join(removed)))
-        elif not failed:
-            messagebox.showinfo(t("title"), t("hijack_none"))
-        scan_hijacks()
+        def done():
+            if removed:
+                update_status(t("hijack_removed").format(len(removed)), STATUS_COLORS["ok"])
+            else:
+                update_status(t("hijack_none"), STATUS_COLORS["info"])
+            if failed:
+                message = t("hijack_remove_fail").format("\n".join(failed))
+                if backup._session_dir is not None and any(backup._session_dir.rglob("*")):
+                    message += "\n\n" + t("backup_done").format(path=backup.BASE_DIR)
+                messagebox.showwarning(t("title"), message)
+                if messagebox.askyesno(t("title"), t("open_log_ask")):
+                    os.startfile(backup.BASE_DIR)
+            if removed:
+                messagebox.showinfo(t("title"), t("hijack_removed").format("\n".join(removed)))
+            elif not failed:
+                messagebox.showinfo(t("title"), t("hijack_none"))
+        run_in_ui(done)
+        run_in_ui(scan_hijacks)
     threading.Thread(target=task, daemon=True).start()
 
 def apply_search_policy():
     """Hard-enforce the selected engine in all Chromium browsers + Firefox."""
-    engine = engines.get_engine(engine_menu.get())
+    engine_name = engine_menu.get()
+    if not engine_name:
+        return
+    engine = engines.get_engine(engine_name)
 
     def task():
         applied, failed = policies.apply_chromium(engine, list(policies.CHROMIUM_POLICY_PATHS))
         ff_applied, ff_failed = policies.apply_firefox(engine)
         applied += ff_applied
         failed += ff_failed
-        update_status(t("policy_applied").format(", ".join(applied) or "-"), STATUS_COLORS["ok"])
-        if failed:
-            messagebox.showwarning(t("title"), t("policy_failed").format(", ".join(failed)))
-        else:
-            messagebox.showinfo(t("title"), t("policy_applied").format(", ".join(applied)))
+        backup.log_action(
+            f"apply_search_policy: engine={engine.name} applied={applied} failed={failed}"
+        )
+        def done():
+            update_status(t("policy_applied").format(", ".join(applied) or "-"), STATUS_COLORS["ok"])
+            if failed:
+                messagebox.showwarning(t("title"), t("policy_failed").format(", ".join(failed)))
+            else:
+                messagebox.showinfo(t("title"), t("policy_applied").format(", ".join(applied)))
+        run_in_ui(done)
     threading.Thread(target=task, daemon=True).start()
 
 def remove_yandex_policies():
     """Strip Yandex DefaultSearchProvider policy values from the registry."""
     def task():
         cleaned = policies.remove_yandex_search_policies()
-        if cleaned:
-            update_status(t("policy_cleaned").format(", ".join(cleaned)), STATUS_COLORS["ok"])
-            messagebox.showinfo(t("title"), t("policy_cleaned").format("\n".join(cleaned)))
-        else:
-            update_status(t("policy_nothing"), STATUS_COLORS["info"])
-            messagebox.showinfo(t("title"), t("policy_nothing"))
+        backup.log_action(f"remove_yandex_policies: cleaned={cleaned}")
+        def done():
+            if cleaned:
+                update_status(t("policy_cleaned").format(", ".join(cleaned)), STATUS_COLORS["ok"])
+                messagebox.showinfo(t("title"), t("policy_cleaned").format("\n".join(cleaned)))
+            else:
+                update_status(t("policy_nothing"), STATUS_COLORS["info"])
+                messagebox.showinfo(t("title"), t("policy_nothing"))
+        run_in_ui(done)
     threading.Thread(target=task, daemon=True).start()
 
 # --- GUI ---
@@ -204,47 +265,47 @@ style.configure("TLabelframe.Label", font=("Segoe UI", 10, "bold"), foreground="
 # Footer: pinned bottom-right, packed FIRST so it keeps its space when the
 # window is resized smaller (pack gives space to earlier widgets first)
 footer = ttk.Frame(root, padding=(16, 4, 16, 10))
-footer.pack(side=BOTTOM, fill=X)
+footer.pack(side="bottom", fill="x")
 
 github_link = ttk.Label(
     footer, font=("Segoe UI", 9, "underline"), foreground="#0369a1",
     text="GitHub", cursor="hand2"
 )
-github_link.pack(side=RIGHT)
+github_link.pack(side="right")
 github_link.bind("<Button-1>", lambda e: webbrowser.open(GITHUB_URL))
 
 footer_label = ttk.Label(
     footer, font=("Segoe UI", 9), foreground=TEXT_MUTED,
     text=f"AntiYandexVanced {APP_VERSION} by {APP_AUTHOR} |"
 )
-footer_label.pack(side=RIGHT, padx=(0, 4))
+footer_label.pack(side="right", padx=(0, 4))
 
 # Status bar: packed second (above footer) so it also survives window resize
 status_label = ttk.Label(
     root, font=("Segoe UI", 10), wraplength=400, justify="center",
     anchor="center", padding=(20, 8, 20, 6)
 )
-status_label.pack(side=BOTTOM, fill=X)
+status_label.pack(side="bottom", fill="x")
 
 # Policy section card: pinned above the status bar, survives window resize
 policy_card = ttk.Labelframe(root, text=t("policy_section"), padding=(16, 8, 16, 12))
-policy_card.pack(side=BOTTOM, fill=X, padx=20, pady=(10, 4))
+policy_card.pack(side="bottom", fill="x", padx=20, pady=(10, 4))
 
 policy_row = ttk.Frame(policy_card)
-policy_row.pack(fill=X, pady=(4, 8))
+policy_row.pack(fill="x", pady=(4, 8))
 
 engine_menu = ttk.Combobox(
     policy_row, values=list(engines.ENGINE_NAMES),
     state="readonly", font=("Segoe UI", 11)
 )
 engine_menu.set(engines.ENGINE_NAMES[0])
-engine_menu.pack(fill=X)
+engine_menu.pack(fill="x")
 
-btn_policy = ttk.Button(policy_card, bootstyle=SUCCESS, command=apply_search_policy)
-btn_policy.pack(fill=X, pady=(0, 6))
+btn_policy = ttk.Button(policy_card, bootstyle="success", command=apply_search_policy)
+btn_policy.pack(fill="x", pady=(0, 6))
 
-btn_unyandex_policy = ttk.Button(policy_card, bootstyle=SECONDARY, command=remove_yandex_policies)
-btn_unyandex_policy.pack(fill=X, pady=(0, 2))
+btn_unyandex_policy = ttk.Button(policy_card, bootstyle="secondary", command=remove_yandex_policies)
+btn_unyandex_policy.pack(fill="x", pady=(0, 2))
 
 def on_language_change(choice):
     global language
@@ -256,7 +317,7 @@ def on_language_change(choice):
 
 # Language selector: top-right corner
 lang_bar = ttk.Frame(root, padding=(20, 10, 20, 0))
-lang_bar.pack(fill=X)
+lang_bar.pack(fill="x")
 
 lang_menu = ttk.Combobox(
     lang_bar, values=list(translations.LANG_DISPLAY_NAMES.values()),
@@ -264,37 +325,37 @@ lang_menu = ttk.Combobox(
 )
 lang_menu.set(translations.LANG_DISPLAY_NAMES[language])
 lang_menu.bind("<<ComboboxSelected>>", on_language_change)
-lang_menu.pack(side=RIGHT)
+lang_menu.pack(side="right")
 
 lang_label = ttk.Label(lang_bar, font=("Segoe UI", 11), foreground=TEXT_MUTED)
-lang_label.pack(side=RIGHT, padx=(0, 8))
+lang_label.pack(side="right", padx=(0, 8))
 
 # Title centered
 main_label = ttk.Label(root, font=("Segoe UI", 18, "bold"), anchor="center")
-main_label.pack(fill=X, padx=20, pady=(6, 10))
+main_label.pack(fill="x", padx=20, pady=(6, 10))
 
 # Primary actions: full-width stack, same margins as the cards below
 actions = ttk.Frame(root)
-actions.pack(fill=X, padx=20, pady=(2, 2))
+actions.pack(fill="x", padx=20, pady=(2, 2))
 
-btn_check = ttk.Button(actions, bootstyle=INFO, command=check_yandex_browser)
-btn_check.pack(fill=X, pady=2)
+btn_check = ttk.Button(actions, bootstyle="info", command=check_yandex_browser)
+btn_check.pack(fill="x", pady=2)
 
-btn_registry = ttk.Button(actions, bootstyle=SECONDARY, command=check_registry_for_yandex)
-btn_registry.pack(fill=X, pady=2)
+btn_registry = ttk.Button(actions, bootstyle="secondary", command=check_registry_for_yandex)
+btn_registry.pack(fill="x", pady=2)
 
-btn_kill = ttk.Button(actions, bootstyle=INFO, command=kill_yandex_processes)
-btn_kill.pack(fill=X, pady=2)
+btn_kill = ttk.Button(actions, bootstyle="info", command=kill_yandex_processes)
+btn_kill.pack(fill="x", pady=2)
 
-btn_delete = ttk.Button(actions, bootstyle=DANGER, command=uninstall_yandex_browser)
-btn_delete.pack(fill=X, pady=(2, 8))
+btn_delete = ttk.Button(actions, bootstyle="danger", command=uninstall_yandex_browser)
+btn_delete.pack(fill="x", pady=(2, 8))
 
 # Hijack section card: pinned above the policy card, survives window resize
 hijack_card = ttk.Labelframe(root, text=t("hijack_section"), padding=(16, 8, 16, 12))
-hijack_card.pack(side=BOTTOM, fill=X, padx=20, pady=(6, 4))
+hijack_card.pack(side="bottom", fill="x", padx=20, pady=(6, 4))
 
-btn_hijack = ttk.Button(hijack_card, bootstyle=INFO, command=scan_hijacks)
-btn_hijack.pack(fill=X, pady=(2, 8))
+btn_hijack = ttk.Button(hijack_card, bootstyle="info", command=scan_hijacks)
+btn_hijack.pack(fill="x", pady=(2, 8))
 
 findings_box = tk.Text(
     hijack_card, height=4, wrap="word", font=("Consolas", 10),
@@ -302,14 +363,14 @@ findings_box = tk.Text(
     borderwidth=0, highlightthickness=1, highlightbackground="#e2e8f0",
     padx=8, pady=6
 )
-findings_box.pack(fill=X, pady=(0, 8))
+findings_box.pack(fill="x", pady=(0, 8))
 findings_box.configure(state=tk.DISABLED)
 
-btn_hijack_remove = ttk.Button(hijack_card, bootstyle=WARNING, command=remove_hijacks)
-btn_hijack_remove.pack(fill=X, pady=(0, 2))
+btn_hijack_remove = ttk.Button(hijack_card, bootstyle="warning", command=remove_hijacks)
+btn_hijack_remove.pack(fill="x", pady=(0, 2))
 
 def update_ui():
-    """Функция обновления всех текстов в интерфейсе"""
+    """Refresh every translatable text in the interface."""
     root.title(t("title"))
     main_label.configure(text=t("title"))
     btn_check.configure(text=t("search_btn"))
@@ -324,8 +385,11 @@ def update_ui():
     btn_unyandex_policy.configure(text=t("policy_unyandex_btn"))
     lang_label.configure(text=t("lang_label"))
     update_status(t("status_wait"))
+    _render_findings([])  # stale findings are in the previous language
 
 update_ui()
 
-root.mainloop()
+if not is_admin():
+    update_status(t("warn_no_admin"), STATUS_COLORS["warn"])
 
+root.mainloop()

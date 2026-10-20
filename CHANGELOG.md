@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Backup before removal: every registry key / profile file touched is exported
+  to `%APPDATA%\AntiYandexVanced\backup\<timestamp>\` before deletion
+- Operation log: `%APPDATA%\AntiYandexVanced\antiyandex.log`
+- 12th hijack vector: Windows Task Scheduler entries (Yandex updater tasks)
+- HKCU Chromium policy scan/cleanup (per-user policies, previously HKLM only)
+- Administrator-rights check at startup with a warning in the status bar
+- Prompt to close running browsers before hijack removal (prevents "database locked")
+- "Open report folder" offer when some hijack items fail to be removed
+- Unit tests for pure logic (engine lookup, Firefox policies.json, LZ4 decompressor)
+
+### Fixed
+- All UI updates from background threads are now marshaled to the main thread
+  via `root.after` (tkinter is not thread-safe)
+- Bare `except:` clauses replaced with `except OSError`
+- Web Data cleanup now deletes exactly the detected rows (by `rowid`), not by
+  URL substring — detection and deletion are consistent
+- SQLite connections are closed on error paths (`finally`)
+- Firefox `policies.json` no longer contains a `null` `SuggestURLTemplate`
+- Firefox policies are no longer written into non-existent install folders
+- Hardcoded Russian admin-error string replaced with a translated key in all
+  10 UI languages
+- `shutil.rmtree` now reports which files are locked instead of a generic error
+- Corrupt LZ4 blocks with invalid match offsets raise instead of returning garbage
+
 ## [2.1.2] - 2026-10-20
 
 ### Changed
