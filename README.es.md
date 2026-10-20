@@ -8,7 +8,7 @@
 
 ## ¿Qué es esto?
 
-Yandex no instala solo un navegador — se registra silenciosamente como buscador y navegador predeterminado a través de una docena de mecanismos del sistema: asociaciones en el registro, políticas de empresa, ajustes de perfiles de navegadores, incluso bases de datos de buscadores dentro de los perfiles Chromium. Eliminar el navegador por sí solo no deshace todo eso.
+Yandex no instala solo un navegador — se registra silenciosamente como buscador y navegador predeterminado a través de quince mecanismos del sistema: asociaciones en el registro, políticas de empresa, ajustes de perfiles de navegadores, incluso bases de datos de buscadores dentro de los perfiles Chromium. Eliminar el navegador por sí solo no deshace todo eso.
 
 **AntiYandex Vanced** (un fork de [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) encuentra **los 15 vectores de secuestro**, los elimina con un clic y luego **bloquea tu buscador predeterminado** al motor que elijas mediante políticas de empresa de Windows — para que nada pueda recuperarlo silenciosamente.
 

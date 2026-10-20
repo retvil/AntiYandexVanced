@@ -8,7 +8,7 @@
 
 ## Qu'est-ce que c'est ?
 
-Yandex n'installe pas qu'un navigateur — il s'enregistre silencieusement comme recherche et navigateur par défaut via une douzaine de mécanismes système : associations dans le registre, politiques d'entreprise, paramètres de profils de navigateurs, même les bases de données de moteurs de recherche dans les profils Chromium. Supprimer le navigateur seul ne suffit pas.
+Yandex n'installe pas qu'un navigateur — il s'enregistre silencieusement comme recherche et navigateur par défaut via quinze mécanismes système : associations dans le registre, politiques d'entreprise, paramètres de profils de navigateurs, même les bases de données de moteurs de recherche dans les profils Chromium. Supprimer le navigateur seul ne suffit pas.
 
 **AntiYandex Vanced** (un fork de [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) trouve **les 15 vecteurs de détournement**, les supprime en un clic, puis **verrouille ta recherche par défaut** sur le moteur de ton choix via les politiques d'entreprise Windows — pour que rien ne puisse la reprendre silencieusement.
 

@@ -8,7 +8,7 @@
 
 ## What is this?
 
-Yandex doesn't just install a browser — it quietly registers itself as the default search and browser through a dozen different system mechanisms: registry associations, enterprise policies, per-profile browser settings, even search-engine databases inside Chromium profiles. Removing the browser alone doesn't undo all of that.
+Yandex doesn't just install a browser — it quietly registers itself as the default search and browser through fifteen different system mechanisms: registry associations, enterprise policies, per-profile browser settings, even search-engine databases inside Chromium profiles. Removing the browser alone doesn't undo all of that.
 
 **AntiYandex Vanced** (a fork of [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) finds **all 15 hijack vectors**, removes them with one click, and then **hard-locks your default search** to an engine of your choice via Windows enterprise policies — so nothing can silently take it back.
 
