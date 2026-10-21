@@ -21,7 +21,11 @@ import products_detect
 import profiles
 
 # Re-exported so profiles.PROFILE_SCANS step names resolve via globals().
-from products_detect import scan_product_dirs, scan_store_apps  # noqa: F401
+from products_detect import (  # noqa: F401
+    scan_local_data_dirs,
+    scan_product_dirs,
+    scan_store_apps,
+)
 
 YANDEX_MARKERS: tuple[str, ...] = ("yandex", "яндекс", "ya.ru", "yandex.ru", "punto")
 
@@ -458,6 +462,7 @@ CONSENT_PREFIXES: tuple[str, ...] = (
     "Roaming: ",
     "YandexDisk data: ",
     "YandexDisk files: ",
+    "Local data: ",
     "Extension: ",
     "Cookies: ",
     "Defender exclusion: ",
@@ -1320,6 +1325,13 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
     if finding.startswith("Product dir: "):
         if products_detect.remove_product_dir(finding):
             removed.append(finding[len("Product dir: "):])
+        else:
+            failed.append(f"{finding} (locked?)")
+        return
+
+    if finding.startswith("Local data: "):
+        if products_detect.remove_local_data(finding):
+            removed.append(finding[len("Local data: "):])
         else:
             failed.append(f"{finding} (locked?)")
         return

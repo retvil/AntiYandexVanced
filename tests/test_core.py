@@ -227,7 +227,8 @@ def test_vanced_excludes_product_wide_vectors():
     for name in (
         "scan_shell_overlays", "scan_context_menus", "scan_leftover_dirs",
         "scan_hosts", "scan_firewall_rules", "scan_defender_exclusions",
-        "scan_keyboard_layouts",
+        "scan_keyboard_layouts", "scan_store_apps", "scan_product_dirs",
+        "scan_local_data_dirs",
     ):
         assert name not in vanced, name
 
@@ -317,3 +318,17 @@ def test_is_product_process_matches_products_and_browser():
     assert products_detect.is_product_process("agent-browser-win32-x64.exe") is False
     assert products_detect.is_product_process(None) is False
     assert products_detect.is_product_process("") is False
+
+
+def test_scan_local_data_dirs_skips_browser(tmp_path, monkeypatch):
+    import products_detect
+    base = tmp_path / "Yandex"
+    (base / "YandexBrowser").mkdir(parents=True)
+    (base / "Punto Switcher").mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    found = products_detect.scan_local_data_dirs()
+    assert found == [f"Local data: {base / 'Punto Switcher'}"]
+
+
+def test_consent_prefixes_cover_local_data():
+    assert "Local data: " in yandex_detect.CONSENT_PREFIXES

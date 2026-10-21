@@ -8,6 +8,7 @@ the browser itself.
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 import backup
 
@@ -106,6 +107,35 @@ def scan_product_dirs() -> list[str]:
             if os.path.isdir(path) and entry.lower() != "yandexbrowser":
                 found.append(f"Product dir: {path}")
     return found
+
+
+def scan_local_data_dirs() -> list[str]:
+    """Non-browser Yandex data directories under %LOCALAPPDATA%\\Yandex.
+
+    The browser data directory is reported by scan_install_paths; other
+    subdirectories (Punto Switcher local data, Yandex Disk updater, Beta
+    builds, ...) belong to other products. These hold user data, so the
+    finding is consent-gated.
+    """
+    base = Path(os.environ.get("LOCALAPPDATA", "")) / "Yandex"
+    if not base.is_dir():
+        return []
+    return [
+        f"Local data: {entry}"
+        for entry in sorted(base.iterdir())
+        if entry.is_dir() and entry.name.lower() != "yandexbrowser"
+    ]
+
+
+def remove_local_data(finding: str) -> bool:
+    """Delete one non-browser local data directory (exported to backup first)."""
+    target = finding[len("Local data: "):]
+    backup.export_dir(target)
+    try:
+        shutil.rmtree(target, ignore_errors=False)
+        return True
+    except OSError:
+        return False
 
 
 def remove_product_dir(finding: str) -> bool:
