@@ -82,6 +82,26 @@ def copy_file(path: str | os.PathLike) -> None:
         pass
 
 
+def export_dir(path: str | os.PathLike) -> None:
+    """Copy every file under a directory into the backup session folder (best-effort).
+
+    Relative structure is preserved under files/<dir name>/ so name
+    collisions between subdirectories cannot overwrite each other.
+    """
+    try:
+        src_root = Path(path)
+        if not src_root.is_dir():
+            return
+        dest_root = _ensure_session() / "files" / src_root.name
+        for src in src_root.rglob("*"):
+            if src.is_file():
+                dest = dest_root / src.relative_to(src_root)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+    except OSError:
+        pass
+
+
 def save_task_xml(task_name: str) -> None:
     """Save a scheduled task definition as XML before deleting it."""
     try:

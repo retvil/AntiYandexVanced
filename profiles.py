@@ -46,6 +46,8 @@ _EXTENDED_STEPS: tuple[str, ...] = (
     "scan_traces",
     "scan_defender_exclusions",
     "scan_keyboard_layouts",
+    "scan_store_apps",
+    "scan_product_dirs",
 )
 
 # Steps that go beyond browser+search and belong to the Extended edition only.
@@ -57,6 +59,8 @@ _EXTENDED_ONLY: frozenset[str] = frozenset({
     "scan_firewall_rules",
     "scan_defender_exclusions",
     "scan_keyboard_layouts",     # Yandex IME
+    "scan_store_apps",           # Yandex Music / Alice / Messenger (Appx)
+    "scan_product_dirs",         # Program Files\Yandex\* non-browser products
 })
 
 PROFILE_SCANS: dict[str, tuple[str, ...]] = {

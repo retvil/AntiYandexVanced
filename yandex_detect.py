@@ -17,7 +17,11 @@ import zipfile
 from pathlib import Path
 
 import backup
+import products_detect
 import profiles
+
+# Re-exported so profiles.PROFILE_SCANS step names resolve via globals().
+from products_detect import scan_product_dirs, scan_store_apps  # noqa: F401
 
 YANDEX_MARKERS: tuple[str, ...] = ("yandex", "яндекс", "ya.ru", "yandex.ru", "punto")
 
@@ -1304,6 +1308,20 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
             removed.append(target)
         except OSError:
             failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith("Store app: "):
+        if products_detect.remove_store_app(finding):
+            removed.append(finding[len("Store app: "):])
+        else:
+            failed.append(f"{finding} (Remove-AppxPackage failed)")
+        return
+
+    if finding.startswith("Product dir: "):
+        if products_detect.remove_product_dir(finding):
+            removed.append(finding[len("Product dir: "):])
+        else:
+            failed.append(f"{finding} (locked?)")
         return
 
     if finding.startswith(("Shell overlay: ", "Context menu: ", "App Paths: ", "Protocol: ")):

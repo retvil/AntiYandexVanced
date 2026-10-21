@@ -245,3 +245,62 @@ def test_scan_all_default_is_extended():
     import inspect
     signature = inspect.signature(yandex_detect.scan_all)
     assert signature.parameters["profile"].default is None
+
+
+# --- Extended product scans (Store apps, product dirs) ---------------------------
+
+def test_parse_appx_output():
+    import products_detect
+    text = "A025C540.Yandex.Music|A025C540.Yandex.Music_4.54_x64__vfvw9svesycw6\n\njunk\n|"
+    parsed = products_detect._parse_appx_output(text)
+    assert parsed == [
+        ("A025C540.Yandex.Music", "A025C540.Yandex.Music_4.54_x64__vfvw9svesycw6"),
+    ]
+
+
+def test_scan_store_apps_returns_list():
+    import products_detect
+    assert isinstance(products_detect.scan_store_apps(), list)
+
+
+def test_scan_product_dirs_skips_browser(tmp_path, monkeypatch):
+    import products_detect
+    base = tmp_path / "Yandex"
+    (base / "YandexBrowser").mkdir(parents=True)
+    (base / "YandexDisk").mkdir()
+    monkeypatch.setattr(
+        products_detect, "scan_product_dirs",
+        lambda: _scan_product_dirs_at(str(base)),
+    )
+    found = products_detect.scan_product_dirs()
+    assert found == [f"Product dir: {base / 'YandexDisk'}"]
+
+
+def _scan_product_dirs_at(base: str) -> list[str]:
+    import os
+    found = []
+    for entry in os.listdir(base):
+        path = os.path.join(base, entry)
+        if os.path.isdir(path) and entry.lower() != "yandexbrowser":
+            found.append(f"Product dir: {path}")
+    return found
+
+
+def test_remove_one_store_app_and_product_dir_dispatch(monkeypatch):
+    import products_detect
+    calls = []
+    monkeypatch.setattr(
+        products_detect, "remove_store_app",
+        lambda finding: calls.append("store") or True,
+    )
+    monkeypatch.setattr(
+        products_detect, "remove_product_dir",
+        lambda finding: calls.append("dir") or True,
+    )
+    removed: list[str] = []
+    failed: list[str] = []
+    yandex_detect._remove_one("Store app: X (Y)", removed, failed)
+    yandex_detect._remove_one("Product dir: C:\\Yandex\\Disk", removed, failed)
+    assert calls == ["store", "dir"]
+    assert failed == []
+    assert removed == ["X (Y)", "C:\\Yandex\\Disk"]
