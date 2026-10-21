@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extended edition**: non-browser product directory scan under
   `Program Files\Yandex\` (Yandex Disk, Punto Switcher, IME, ...) with
   backup-before-delete removal
+- **Extended edition**: non-browser local data scan under
+  `%LOCALAPPDATA%\Yandex\` (Punto Switcher local data, Yandex Disk updater,
+  Beta builds) — consent-gated, backed up before deletion
 - **Extended edition**: "Kill Processes" now terminates every Yandex product
   process (Yandex Disk, Punto Switcher, Store apps), not just the browser
 
