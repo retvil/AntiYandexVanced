@@ -19,6 +19,7 @@ import backup
 import engines
 import exclusions
 import policies
+import products_detect
 import profiles
 import translations
 import yandex_detect
@@ -81,9 +82,15 @@ def check_registry_for_yandex():
 
 def kill_yandex_processes():
     killed = False
+    extended = PROFILE == profiles.EXTENDED
     for proc in psutil.process_iter(['name']):
         try:
-            if proc.info['name'] and proc.info['name'].lower() in ["browser.exe", "yandex.exe"]:
+            name = proc.info['name']
+            if extended:
+                hit = products_detect.is_product_process(name)
+            else:
+                hit = bool(name) and name.lower() in ("browser.exe", "yandex.exe")
+            if hit:
                 proc.kill()
                 killed = True
         except (psutil.NoSuchProcess, psutil.AccessDenied): continue

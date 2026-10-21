@@ -304,3 +304,16 @@ def test_remove_one_store_app_and_product_dir_dispatch(monkeypatch):
     assert calls == ["store", "dir"]
     assert failed == []
     assert removed == ["X (Y)", "C:\\Yandex\\Disk"]
+
+
+def test_is_product_process_matches_products_and_browser():
+    import products_detect
+    assert products_detect.is_product_process("YandexDisk2.exe") is True
+    assert products_detect.is_product_process("punto.exe") is True
+    assert products_detect.is_product_process("browser.exe") is True
+    assert products_detect.is_product_process("yandex.exe") is True
+    assert products_detect.is_product_process("Yandex.Music.exe") is True
+    assert products_detect.is_product_process("chrome.exe") is False
+    assert products_detect.is_product_process("agent-browser-win32-x64.exe") is False
+    assert products_detect.is_product_process(None) is False
+    assert products_detect.is_product_process("") is False

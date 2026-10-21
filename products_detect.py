@@ -11,6 +11,22 @@ import subprocess
 
 import backup
 
+PRODUCT_PROCESS_MARKERS: tuple[str, ...] = ("yandex", "punto")
+
+_BROWSER_PROCESS_NAMES: frozenset[str] = frozenset({"browser.exe", "yandex.exe"})
+
+
+def is_product_process(name: str | None) -> bool:
+    """True if a process belongs to any Yandex product (Extended kill scope).
+
+    Covers Yandex Disk (YandexDisk2.exe), Punto Switcher (punto.exe),
+    Store apps (Yandex Music / Messenger / Alice) and the browser itself.
+    """
+    lowered = (name or "").lower()
+    return lowered in _BROWSER_PROCESS_NAMES or any(
+        marker in lowered for marker in PRODUCT_PROCESS_MARKERS
+    )
+
 _STORE_APPS_PS = (
     "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
     "Get-AppxPackage | Where-Object { $_.Name -match 'yandex' }"
