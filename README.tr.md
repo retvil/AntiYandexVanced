@@ -34,7 +34,8 @@ Yandex yalnızca bir tarayıcı kurmaz — otuz farklı sistem mekanizmasıyla s
 
 [Releases](https://github.com/retvil/AntiYandexVanced/releases) sayfasından indirin:
 
-- **Windows** — `AntiYandexVanced.exe` (taşınabilir, tek dosya, ~35 MB)
+- **Windows** — `AntiYandexVanced.exe` (taşınabilir, tek dosya, ~35 MB) — Yandex Browser ve Yandex Arama kaldırma
+- **Windows** — `AntiYandexExtended.exe` (taşınabilir, tek dosya, ~35 MB) — tüm Yandex ürünlerinin kaldırılması (Yandex Disk, Punto Switcher geçmişi, sistem genelinde izler)
 
 **Yönetici olarak** çalıştırın — HKLM ilkeleri ve kayıt defteri temizliği yükseltilmiş haklar gerektirir.
 

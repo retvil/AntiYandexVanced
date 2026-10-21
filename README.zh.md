@@ -34,7 +34,8 @@ Yandex 安装的不只是一个浏览器 — 它通过三十种不同的系统�
 
 从 [Releases](https://github.com/retvil/AntiYandexVanced/releases) 下载：
 
-- **Windows** — `AntiYandexVanced.exe`（便携版，单文件，约 35 MB）
+- **Windows** — `AntiYandexVanced.exe`（便携版，单文件，约 35 MB） — 移除 Yandex 浏览器和 Yandex 搜索
+- **Windows** — `AntiYandexExtended.exe`（便携版，单文件，约 35 MB）— 移除所有 Yandex 产品（Yandex Disk、Punto Switcher 历史、全系统痕迹）
 
 请**以管理员身份**运行 — HKLM 策略和注册表清理需要提升的权限。
 

@@ -17,6 +17,7 @@ import zipfile
 from pathlib import Path
 
 import backup
+import profiles
 
 YANDEX_MARKERS: tuple[str, ...] = ("yandex", "яндекс", "ya.ru", "yandex.ru", "punto")
 
@@ -847,38 +848,20 @@ def scan_keyboard_layouts() -> list[str]:
     return found
 
 
-def scan_all() -> list[str]:
-    """Run every detection vector and return combined findings."""
+def scan_all(profile: str | None = None) -> list[str]:
+    """Run the detection vectors of a product profile and return findings.
+
+    Args:
+        profile: product profile name (see profiles.py); None = EXTENDED.
+    """
+    if profile is None:
+        profile = profiles.EXTENDED
     findings: list[str] = []
-    findings += [f"Install path: {p}" for p in scan_install_paths()]
-    findings += scan_uninstall_entries()
-    findings += scan_default_browser()
-    findings += scan_start_menu_internet()
-    findings += scan_yandex_software_keys()
-    findings += scan_policy_hijack()
-    findings += scan_chromium_profiles()
-    findings += scan_web_data_keywords()
-    findings += scan_firefox_search()
-    findings += scan_search_scopes()
-    findings += scan_autostart()
-    findings += scan_scheduled_tasks()
-    findings += scan_services()
-    findings += scan_file_associations()
-    findings += scan_shell_overlays()
-    findings += scan_context_menus()
-    findings += scan_startup_approved()
-    findings += scan_app_paths()
-    findings += scan_shortcuts()
-    findings += scan_leftover_dirs()
-    findings += scan_hosts()
-    findings += scan_firewall_rules()
-    findings += scan_uri_protocols()
-    findings += scan_browser_extensions()
-    findings += scan_cookies()
-    findings += scan_openwith()
-    findings += scan_traces()
-    findings += scan_defender_exclusions()
-    findings += scan_keyboard_layouts()
+    for step in profiles.PROFILE_SCANS[profiles.validate(profile)]:
+        if step == "scan_install_paths":
+            findings += [f"Install path: {p}" for p in scan_install_paths()]
+            continue
+        findings += globals()[step]()
     return findings
 
 

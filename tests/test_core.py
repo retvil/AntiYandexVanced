@@ -10,6 +10,7 @@ import pytest
 
 import engines
 import policies
+import profiles
 import yandex_detect
 
 
@@ -205,3 +206,42 @@ def test_new_scan_functions_return_lists():
         "scan_defender_exclusions", "scan_keyboard_layouts",
     ):
         assert isinstance(getattr(yandex_detect, name)(), list), name
+
+
+# --- product profiles (Vanced / Extended) ---------------------------------------
+
+def test_profile_steps_reference_existing_scan_functions():
+    for profile, steps in profiles.PROFILE_SCANS.items():
+        for name in steps:
+            assert callable(getattr(yandex_detect, name, None)), (profile, name)
+
+
+def test_extended_is_superset_of_vanced():
+    assert set(profiles.PROFILE_SCANS[profiles.VANCED]) < set(
+        profiles.PROFILE_SCANS[profiles.EXTENDED]
+    )
+
+
+def test_vanced_excludes_product_wide_vectors():
+    vanced = set(profiles.PROFILE_SCANS[profiles.VANCED])
+    for name in (
+        "scan_shell_overlays", "scan_context_menus", "scan_leftover_dirs",
+        "scan_hosts", "scan_firewall_rules", "scan_defender_exclusions",
+        "scan_keyboard_layouts",
+    ):
+        assert name not in vanced, name
+
+
+def test_validate_rejects_unknown_profile():
+    with pytest.raises(ValueError):
+        profiles.validate("nope")
+
+
+def test_scan_all_vanced_runs_and_is_list():
+    assert isinstance(yandex_detect.scan_all(profiles.VANCED), list)
+
+
+def test_scan_all_default_is_extended():
+    import inspect
+    signature = inspect.signature(yandex_detect.scan_all)
+    assert signature.parameters["profile"].default is None

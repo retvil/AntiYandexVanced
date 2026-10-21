@@ -34,7 +34,8 @@ Yandex doesn't just install a browser — it quietly registers itself as the def
 
 Download from [Releases](https://github.com/retvil/AntiYandexVanced/releases):
 
-- **Windows** — `AntiYandexVanced.exe` (portable, single file, ~35 MB)
+- **Windows** — `AntiYandexVanced.exe` (portable, single file, ~35 MB) — removes Yandex Browser and Yandex Search
+- **Windows** — `AntiYandexExtended.exe` (portable, single file, ~35 MB) — removal of every Yandex product (Yandex Disk, Punto Switcher history, system-wide traces)
 
 Run it **as administrator** — HKLM policies and registry cleanup require elevated rights.
 

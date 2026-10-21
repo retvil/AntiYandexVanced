@@ -34,7 +34,8 @@ Yandex n'installe pas qu'un navigateur — il s'enregistre silencieusement comme
 
 Téléchargez depuis [Releases](https://github.com/retvil/AntiYandexVanced/releases) :
 
-- **Windows** — `AntiYandexVanced.exe` (portable, fichier unique, ~35 Mo)
+- **Windows** — `AntiYandexVanced.exe` (portable, fichier unique, ~35 Mo) — supprime Yandex Browser et Yandex Search
+- **Windows** — `AntiYandexExtended.exe` (portable, fichier unique, ~35 Mo) — suppression de tous les produits Yandex (Yandex Disk, historique Punto Switcher, traces système)
 
 Lancez-le **en tant qu'administrateur** — les politiques HKLM et le nettoyage du registre exigent des droits élevés.
 

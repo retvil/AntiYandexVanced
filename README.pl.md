@@ -34,7 +34,8 @@ Yandex nie instaluje tylko przeglądarki — po cichu rejestruje się jako domy�
 
 Pobierz z [Releases](https://github.com/retvil/AntiYandexVanced/releases):
 
-- **Windows** — `AntiYandexVanced.exe` (portable, jeden plik, ~35 MB)
+- **Windows** — `AntiYandexVanced.exe` (portable, jeden plik, ~35 MB) — usuwa Yandex Browser i Yandex Search
+- **Windows** — `AntiYandexExtended.exe` (portable, jeden plik, ~35 MB) — usuwanie wszystkich produktów Yandex (Yandex Disk, historia Punto Switcher, ślady w całym systemie)
 
 Uruchom **jako administrator** — polityki HKLM i czyszczenie rejestru wymagają podwyższonych uprawnień.
 

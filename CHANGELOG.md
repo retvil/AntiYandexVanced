@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Two editions from one codebase: **AntiYandexVanced** (Yandex Browser +
+  Yandex Search removal) and **AntiYandexExtended** (every Yandex product) —
+  product profiles in `profiles.py` select the scan scope, shared GUI in
+  `app.py`, thin entry points `main.py` / `main_extended.py`
+- `build.bat` now builds both EXEs
+
 ## [2.4.0] - 2026-10-21
 
 ### Added

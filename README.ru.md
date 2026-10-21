@@ -34,7 +34,8 @@
 
 Скачайте из [Releases](https://github.com/retvil/AntiYandexVanced/releases):
 
-- **Windows** — `AntiYandexVanced.exe` (портативный, один файл, ~35 МБ)
+- **Windows** — `AntiYandexVanced.exe` (портативный, один файл, ~35 МБ) — удаление Яндекс.Браузера и Яндекс.Поиска
+- **Windows** — `AntiYandexExtended.exe` (портативный, один файл, ~35 МБ) — удаление всех продуктов Яндекса (Яндекс.Диск, история Punto Switcher, общесистемные следы)
 
 Запускайте **от имени администратора** — HKLM-политики и чистка реестра требуют повышенных прав.
 

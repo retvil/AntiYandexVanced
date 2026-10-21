@@ -34,7 +34,8 @@ Yandex жай ғана браузер орнатпайды — ол жүйені
 
 [Releases](https://github.com/retvil/AntiYandexVanced/releases) бетінен жүктеп алыңыз:
 
-- **Windows** — `AntiYandexVanced.exe` (портативті, бір файл, ~35 МБ)
+- **Windows** — `AntiYandexVanced.exe` (портативті, бір файл, ~35 МБ) — Yandex Browser және Yandex Search жою
+- **Windows** — `AntiYandexExtended.exe` (портативті, бір файл, ~35 МБ) — Яндекстің барлық өнімдерін жою (Yandex Disk, Punto Switcher тарихы, жүйелік іздер)
 
 **Әкімші ретінде** іске қосыңыз — HKLM-саясаттар мен реестр тазартуы жоғарылау құқықтарды қажет етеді.
 
