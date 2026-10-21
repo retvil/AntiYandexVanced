@@ -930,6 +930,59 @@ def scan_traces() -> list[str]:
         for entry in directory.iterdir():
             if _is_yandex(entry.name):
                 found.append(f"Trace: {entry}")
+    temp_dir = Path(os.environ.get("TEMP", ""))
+    if temp_dir.is_dir():
+        for exe in temp_dir.glob("*.exe"):
+            if _is_yandex(exe.name):
+                found.append(f"Trace: {exe}")
+    return found
+
+
+_ZONE_MAP_DOMAINS = (
+    r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+    r"\ZoneMap\Domains"
+)
+_REGISTERED_APPS_KEY = r"Software\RegisteredApplications"
+_MUICACHE_KEY = (
+    r"Software\Classes\Local Settings\Software\Microsoft\Windows"
+    r"\CurrentVersion\Explorer\MUICache"
+)
+
+
+def scan_zone_map() -> list[str]:
+    """IE zone-map entries for Yandex domains (trusted-site leftovers)."""
+    found = []
+    seen: set[str] = set()
+    for hive in _HIVES:
+        for domain in _reg_enum_subkey_names(hive, _ZONE_MAP_DOMAINS):
+            if not _is_yandex(domain) or domain.lower() in seen:
+                continue
+            seen.add(domain.lower())
+            found.append(f"Zone map: {domain}")
+    return found
+
+
+def scan_registered_apps() -> list[str]:
+    """RegisteredApplications entries naming Yandex (default-apps metadata)."""
+    found = []
+    seen: set[str] = set()
+    for hive in _HIVES:
+        for name, data in _reg_enum_values(hive, _REGISTERED_APPS_KEY):
+            if not (_is_yandex(name) or _is_yandex(data)):
+                continue
+            if name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            found.append(f"Registered app: {name} = {data}")
+    return found
+
+
+def scan_muicache() -> list[str]:
+    """MUICache entries referencing Yandex executables (execution trace)."""
+    found = []
+    for name, data in _reg_enum_values(winreg.HKEY_CURRENT_USER, _MUICACHE_KEY):
+        if _is_yandex(name) or _is_yandex(data):
+            found.append(f"MUICache: {name}")
     return found
 
 
@@ -1620,6 +1673,31 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
             removed.append(str(target))
         except OSError:
             failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith("Zone map: "):
+        domain = finding[len("Zone map: "):]
+        if _delete_tree_any_hive(f"{_ZONE_MAP_DOMAINS}\\{domain}"):
+            removed.append(domain)
+        else:
+            failed.append(domain)
+        return
+
+    if finding.startswith("Registered app: "):
+        left = finding[len("Registered app: "):]
+        name = left.split(" = ", 1)[0]
+        if _delete_value_any_hive(_REGISTERED_APPS_KEY, name):
+            removed.append(name)
+        else:
+            failed.append(name)
+        return
+
+    if finding.startswith("MUICache: "):
+        name = finding[len("MUICache: "):]
+        if _delete_value_any_hive(_MUICACHE_KEY, name):
+            removed.append(name)
+        else:
+            failed.append(name)
         return
 
     if finding.startswith("Defender exclusion: "):

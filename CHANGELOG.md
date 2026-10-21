@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Zone map scan** — detects IE zone-map entries for Yandex domains
+  (trusted-site leftovers); removal deletes the domain subtree (exported first)
+- **RegisteredApplications scan** — detects Yandex entries in default-apps
+  metadata; removal deletes the value (exported first)
+- **MUICache scan** — detects execution traces of Yandex executables; removal
+  deletes the cache value (exported first)
+- **%TEMP% installer traces** — scan_traces now also reports Yandex installers
+  left in the user temp directory
+- **Vanced process kill by path** — browser-scoped kill now also matches any
+  process whose executable lives under a YandexBrowser path (crashpad,
+  updater), not only the narrow browser.exe/yandex.exe name list
 - **Startup URL policy hijack scan** — detects Yandex URLs in
   `RestoreOnStartupURLs` enterprise policies (Edge, Chrome, Chromium, Brave,
   Vivaldi, Opera, Yandex Browser); removal strips the Yandex values

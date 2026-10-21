@@ -83,13 +83,16 @@ def check_registry_for_yandex():
 def kill_yandex_processes():
     killed = False
     extended = PROFILE == profiles.EXTENDED
-    for proc in psutil.process_iter(['name']):
+    for proc in psutil.process_iter(['name', 'exe']):
         try:
             name = proc.info['name']
             if extended:
                 hit = products_detect.is_product_process(name)
             else:
                 hit = bool(name) and name.lower() in ("browser.exe", "yandex.exe")
+                if not hit:
+                    exe = (proc.info.get('exe') or "").lower()
+                    hit = "yandexbrowser" in exe
             if hit:
                 proc.kill()
                 killed = True

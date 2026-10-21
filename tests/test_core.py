@@ -427,3 +427,50 @@ def test_remove_one_startup_url_dispatch(monkeypatch):
     assert calls == ["Edge"]
     assert removed == ["Edge https://ya.ru/"]
     assert failed == []
+
+
+# --- Zone map, RegisteredApplications and MUICache vectors -----------------------
+
+def test_scan_zone_map_returns_list():
+    assert isinstance(yandex_detect.scan_zone_map(), list)
+
+
+def test_scan_registered_apps_returns_list():
+    assert isinstance(yandex_detect.scan_registered_apps(), list)
+
+
+def test_scan_muicache_returns_list():
+    assert isinstance(yandex_detect.scan_muicache(), list)
+
+
+def test_new_registry_scans_in_both_editions():
+    for name in ("scan_zone_map", "scan_registered_apps", "scan_muicache"):
+        assert name in profiles.PROFILE_SCANS[profiles.VANCED]
+        assert name in profiles.PROFILE_SCANS[profiles.EXTENDED]
+
+
+def test_remove_one_zone_map_registered_muicache_dispatch(monkeypatch):
+    calls: list[tuple] = []
+    monkeypatch.setattr(
+        yandex_detect, "_delete_tree_any_hive",
+        lambda path: calls.append(("tree", path)) or True,
+    )
+    monkeypatch.setattr(
+        yandex_detect, "_delete_value_any_hive",
+        lambda path, name: calls.append(("value", path, name)) or True,
+    )
+    removed: list[str] = []
+    failed: list[str] = []
+    yandex_detect._remove_one("Zone map: yandex.ru", removed, failed)
+    yandex_detect._remove_one(
+        "Registered app: Yandex Browser = Software\\Yandex\\Capabilities",
+        removed, failed,
+    )
+    yandex_detect._remove_one("MUICache: browser.exe", removed, failed)
+    assert calls[0][0] == "tree" and calls[0][1].endswith("yandex.ru")
+    assert calls[1] == (
+        "value", yandex_detect._REGISTERED_APPS_KEY, "Yandex Browser"
+    )
+    assert calls[2] == ("value", yandex_detect._MUICACHE_KEY, "browser.exe")
+    assert len(removed) == 3
+    assert failed == []
