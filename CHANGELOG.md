@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Startup URL policy hijack scan** — detects Yandex URLs in
+  `RestoreOnStartupURLs` enterprise policies (Edge, Chrome, Chromium, Brave,
+  Vivaldi, Opera, Yandex Browser); removal strips the Yandex values
+- **Firefox homepage hijack scan** — detects `browser.startup.homepage`
+  pointing to Yandex in Firefox/Waterfox `prefs.js`; removal rewrites the
+  file (backed up first)
+
 ## [2.7.0] - 2026-10-21
 
 ### Added

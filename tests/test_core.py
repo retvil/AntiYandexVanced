@@ -377,3 +377,53 @@ def test_remove_one_dns_and_start_page_dispatch(monkeypatch):
 
 def test_consent_prefixes_cover_dns():
     assert "DNS: " in yandex_detect.CONSENT_PREFIXES
+
+
+# --- Startup URLs and Firefox homepage vectors -----------------------------------
+
+def test_scan_startup_urls_returns_list():
+    assert isinstance(yandex_detect.scan_startup_urls(), list)
+
+
+def test_scan_firefox_homepage_returns_list():
+    assert isinstance(yandex_detect.scan_firefox_homepage(), list)
+
+
+def test_startup_urls_and_firefox_homepage_in_both_editions():
+    for name in ("scan_startup_urls", "scan_firefox_homepage"):
+        assert name in profiles.PROFILE_SCANS[profiles.VANCED]
+        assert name in profiles.PROFILE_SCANS[profiles.EXTENDED]
+
+
+def test_remove_firefox_homepage_strips_yandex_lines(tmp_path, monkeypatch):
+    profile_dir = tmp_path / "abc.default"
+    profile_dir.mkdir()
+    prefs = profile_dir / "prefs.js"
+    prefs.write_text(
+        'user_pref("browser.startup.homepage", "https://ya.ru/");\n'
+        'user_pref("browser.startup.homepage_override.mstone", "138.0");\n'
+        'user_pref("browser.startup.page", 1);\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        yandex_detect, "_firefox_profile_roots", lambda: [tmp_path]
+    )
+    assert yandex_detect._remove_firefox_homepage("abc.default") is True
+    kept = prefs.read_text(encoding="utf-8")
+    assert "ya.ru" not in kept
+    assert "browser.startup.homepage_override.mstone" in kept
+    assert "browser.startup.page" in kept
+
+
+def test_remove_one_startup_url_dispatch(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        yandex_detect, "_remove_startup_urls",
+        lambda browser: calls.append(browser) or True,
+    )
+    removed: list[str] = []
+    failed: list[str] = []
+    yandex_detect._remove_one("Startup URL: Edge https://ya.ru/", removed, failed)
+    assert calls == ["Edge"]
+    assert removed == ["Edge https://ya.ru/"]
+    assert failed == []

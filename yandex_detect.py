@@ -238,6 +238,56 @@ def scan_policy_hijack() -> list[str]:
     return found
 
 
+_STARTUP_URL_POLICY_KEYS: tuple[tuple[str, str], ...] = (
+    (r"Software\Policies\Microsoft\Edge", "Edge"),
+    (r"Software\Policies\Google\Chrome", "Chrome"),
+    (r"Software\Policies\Chromium", "Chromium"),
+    (r"Software\Policies\BraveSoftware\Brave", "Brave"),
+    (r"Software\Policies\Vivaldi", "Vivaldi"),
+    (r"Software\Policies\Opera Software\Opera", "Opera"),
+    (r"Software\Policies\YandexBrowser", "Yandex Browser"),
+)
+
+
+def scan_startup_urls() -> list[str]:
+    """Enterprise-policy startup URLs (RestoreOnStartupURLs) pointing to Yandex."""
+    found = []
+    for rel, browser in _STARTUP_URL_POLICY_KEYS:
+        urls_path = f"{rel}\\RestoreOnStartupURLs"
+        for value_name in _reg_enum_value_names(winreg.HKEY_CURRENT_USER, urls_path):
+            value = _reg_get_string(winreg.HKEY_CURRENT_USER, urls_path, value_name)
+            if value and _is_yandex(value):
+                found.append(f"Startup URL: {browser} {value}")
+    return found
+
+
+def _remove_startup_urls(browser: str) -> bool:
+    """Delete Yandex values from one browser's RestoreOnStartupURLs policy."""
+    rel_map = dict(_STARTUP_URL_POLICY_KEYS)
+    if browser not in rel_map:
+        return False
+    urls_path = f"{rel_map[browser]}\\RestoreOnStartupURLs"
+    try:
+        winreg.OpenKey(winreg.HKEY_CURRENT_USER, urls_path, 0, winreg.KEY_READ)
+    except OSError:
+        return False
+    backup.export_key(winreg.HKEY_CURRENT_USER, urls_path)
+    deleted = False
+    for value_name in _reg_enum_value_names(winreg.HKEY_CURRENT_USER, urls_path):
+        data = _reg_get_string(winreg.HKEY_CURRENT_USER, urls_path, value_name)
+        if not (data and _is_yandex(data)):
+            continue
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER, urls_path, 0, winreg.KEY_SET_VALUE
+            ) as key:
+                winreg.DeleteValue(key, value_name)
+            deleted = True
+        except OSError:
+            pass
+    return deleted
+
+
 def scan_chromium_profiles() -> list[str]:
     """Per-profile Chromium Preferences with Yandex as default search engine."""
     found = []
@@ -325,6 +375,61 @@ def _lz4_block_decompress(data: bytes, uncompressed_size: int) -> bytes:
         for i in range(match_len):
             out.append(out[match_start + i])
     return bytes(out)
+
+
+def _firefox_profile_roots() -> list[Path]:
+    """Profile directories of Firefox-family browsers (Firefox, Waterfox)."""
+    appdata = os.environ.get("APPDATA", "")
+    return [
+        Path(appdata) / "Mozilla" / "Firefox" / "Profiles",
+        Path(appdata) / "Waterfox" / "Profiles",
+    ]
+
+
+def scan_firefox_homepage() -> list[str]:
+    """Firefox prefs.js startup homepage pointing to Yandex."""
+    found = []
+    for profiles_root in _firefox_profile_roots():
+        if not profiles_root.is_dir():
+            continue
+        for profile_dir in profiles_root.iterdir():
+            prefs = profile_dir / "prefs.js"
+            if not prefs.is_file():
+                continue
+            try:
+                text = prefs.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for line in text.splitlines():
+                if "browser.startup.homepage" in line and _is_yandex(line):
+                    found.append(f"Firefox homepage [{profile_dir.name}]: {line.strip()}")
+                    break
+    return found
+
+
+def _remove_firefox_homepage(profile_name: str) -> bool:
+    """Strip Yandex homepage lines from one Firefox profile's prefs.js."""
+    for profiles_root in _firefox_profile_roots():
+        if not profiles_root.is_dir():
+            continue
+        for profile_dir in profiles_root.iterdir():
+            if profile_dir.name != profile_name:
+                continue
+            prefs = profile_dir / "prefs.js"
+            if not prefs.is_file():
+                continue
+            backup.copy_file(prefs)
+            try:
+                lines = prefs.read_text(encoding="utf-8", errors="ignore").splitlines()
+                kept = [
+                    l for l in lines
+                    if not ("browser.startup.homepage" in l and _is_yandex(l))
+                ]
+                prefs.write_text("\n".join(kept) + "\n", encoding="utf-8")
+                return True
+            except OSError:
+                return False
+    return False
 
 
 def scan_firefox_search() -> list[str]:
@@ -1362,6 +1467,23 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
                 winreg.DeleteValue(key, "Start Page")
             removed.append(finding[len("Start page: "):])
         except OSError:
+            failed.append(f"{finding} (locked?)")
+        return
+
+    if finding.startswith("Startup URL: "):
+        left = finding[len("Startup URL: "):]
+        browser = left.split(" ", 1)[0]
+        if _remove_startup_urls(browser):
+            removed.append(left)
+        else:
+            failed.append(f"{finding} (locked?)")
+        return
+
+    if finding.startswith("Firefox homepage ["):
+        profile_name = finding[len("Firefox homepage ["):].rsplit("]", 1)[0]
+        if _remove_firefox_homepage(profile_name):
+            removed.append(finding[len("Firefox homepage ["):].rstrip("]"))
+        else:
             failed.append(f"{finding} (locked?)")
         return
 
