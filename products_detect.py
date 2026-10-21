@@ -6,6 +6,7 @@ the browser itself.
 """
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -136,6 +137,66 @@ def remove_local_data(finding: str) -> bool:
         return True
     except OSError:
         return False
+
+
+YANDEX_DNS_IPS: frozenset[str] = frozenset({
+    "77.88.8.8", "77.88.8.1",    # basic
+    "77.88.8.88", "77.88.8.2",   # safe
+    "77.88.8.7", "77.88.8.3",    # family
+})
+
+_DNS_PS = (
+    "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+    "Get-DnsClientServerAddress -AddressFamily IPv4"
+    " | ForEach-Object { \"$($_.InterfaceAlias)|$($_.InterfaceIndex)|$($_.ServerAddresses -join ',')\" }"
+)
+
+
+def _parse_dns_output(text: str) -> list[tuple[str, str, list[str]]]:
+    """Parse 'alias|index|ip1,ip2' lines produced by the DNS scan script."""
+    result = []
+    for line in text.splitlines():
+        parts = line.strip().split("|")
+        if len(parts) != 3:
+            continue
+        alias, index, ips = parts
+        ip_list = [ip for ip in ips.split(",") if ip]
+        if alias and index.isdigit() and ip_list:
+            result.append((alias, index, ip_list))
+    return result
+
+
+def scan_dns_servers() -> list[str]:
+    """Network adapters configured with Yandex.DNS servers (77.88.8.x)."""
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", _DNS_PS],
+            capture_output=True, timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    found = []
+    for alias, index, ips in _parse_dns_output(proc.stdout.decode("utf-8", errors="replace")):
+        yandex_ips = [ip for ip in ips if ip in YANDEX_DNS_IPS]
+        if yandex_ips:
+            found.append(f"DNS: {alias} (index {index}, {', '.join(yandex_ips)})")
+    return found
+
+
+def remove_dns(finding: str) -> bool:
+    """Reset one adapter's DNS servers to automatic (DHCP/router defaults)."""
+    match = re.search(r"index (\d+)", finding)
+    if not match:
+        return False
+    script = f"Set-DnsClientServerAddress -InterfaceIndex {match.group(1)} -ResetServerAddresses"
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True, timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0
 
 
 def remove_product_dir(finding: str) -> bool:

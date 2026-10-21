@@ -20,6 +20,7 @@ _EXTENDED_STEPS: tuple[str, ...] = (
     "scan_install_paths",
     "scan_uninstall_entries",
     "scan_default_browser",
+    "scan_start_page",
     "scan_start_menu_internet",
     "scan_yandex_software_keys",
     "scan_policy_hijack",
@@ -49,6 +50,7 @@ _EXTENDED_STEPS: tuple[str, ...] = (
     "scan_store_apps",
     "scan_product_dirs",
     "scan_local_data_dirs",
+    "scan_dns_servers",
 )
 
 # Steps that go beyond browser+search and belong to the Extended edition only.
@@ -63,6 +65,7 @@ _EXTENDED_ONLY: frozenset[str] = frozenset({
     "scan_store_apps",           # Yandex Music / Alice / Messenger (Appx)
     "scan_product_dirs",         # Program Files\Yandex\* non-browser products
     "scan_local_data_dirs",      # %LOCALAPPDATA%\Yandex\* non-browser data
+    "scan_dns_servers",          # Yandex.DNS (77.88.8.x) in network adapters
 })
 
 PROFILE_SCANS: dict[str, tuple[str, ...]] = {

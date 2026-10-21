@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Yandex.DNS scan** (Extended) — detects network adapters configured with
+  Yandex DNS servers (77.88.8.x basic/safe/family); removal resets the
+  adapter to automatic DNS; consent-gated
+- **Start Page hijack scan** — detects the legacy IE homepage
+  (`HKCU\...\Internet Explorer\Main\Start Page`) pointing to Yandex/ya.ru;
+  removal restores the default (both editions)
+
 ## [2.6.0] - 2026-10-21
 
 ### Added

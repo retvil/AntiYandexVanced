@@ -22,6 +22,7 @@ import profiles
 
 # Re-exported so profiles.PROFILE_SCANS step names resolve via globals().
 from products_detect import (  # noqa: F401
+    scan_dns_servers,
     scan_local_data_dirs,
     scan_product_dirs,
     scan_store_apps,
@@ -170,6 +171,15 @@ def scan_uninstall_entries() -> list[str]:
             if display and _is_yandex(display):
                 found.append(f"{path}\\{subkey} (DisplayName={display})")
     return found
+
+
+def scan_start_page() -> list[str]:
+    """Legacy IE homepage (Start Page) pointing to Yandex."""
+    rel = r"Software\Microsoft\Internet Explorer\Main"
+    value = _reg_get_string(winreg.HKEY_CURRENT_USER, rel, "Start Page")
+    if value and _is_yandex(value):
+        return [f"Start page: {value}"]
+    return []
 
 
 def scan_default_browser() -> list[str]:
@@ -463,6 +473,7 @@ CONSENT_PREFIXES: tuple[str, ...] = (
     "YandexDisk data: ",
     "YandexDisk files: ",
     "Local data: ",
+    "DNS: ",
     "Extension: ",
     "Cookies: ",
     "Defender exclusion: ",
@@ -1333,6 +1344,24 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
         if products_detect.remove_local_data(finding):
             removed.append(finding[len("Local data: "):])
         else:
+            failed.append(f"{finding} (locked?)")
+        return
+
+    if finding.startswith("DNS: "):
+        if products_detect.remove_dns(finding):
+            removed.append(finding[len("DNS: "):])
+        else:
+            failed.append(f"{finding} (reset failed)")
+        return
+
+    if finding.startswith("Start page: "):
+        rel = r"Software\Microsoft\Internet Explorer\Main"
+        backup.export_key(winreg.HKEY_CURRENT_USER, rel)
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, rel, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, "Start Page")
+            removed.append(finding[len("Start page: "):])
+        except OSError:
             failed.append(f"{finding} (locked?)")
         return
 

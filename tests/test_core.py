@@ -332,3 +332,48 @@ def test_scan_local_data_dirs_skips_browser(tmp_path, monkeypatch):
 
 def test_consent_prefixes_cover_local_data():
     assert "Local data: " in yandex_detect.CONSENT_PREFIXES
+
+
+# --- DNS servers and Start Page vectors ------------------------------------------
+
+def test_parse_dns_output():
+    import products_detect
+    text = "Ethernet|14|77.88.8.8,77.88.8.1\nWi-Fi|5|\njunk\nbad|line\n"
+    parsed = products_detect._parse_dns_output(text)
+    assert parsed == [("Ethernet", "14", ["77.88.8.8", "77.88.8.1"])]
+
+
+def test_scan_dns_servers_returns_list():
+    import products_detect
+    assert isinstance(products_detect.scan_dns_servers(), list)
+
+
+def test_scan_start_page_returns_list():
+    assert isinstance(yandex_detect.scan_start_page(), list)
+
+
+def test_start_page_in_vanced_dns_extended_only():
+    vanced = set(profiles.PROFILE_SCANS[profiles.VANCED])
+    extended = set(profiles.PROFILE_SCANS[profiles.EXTENDED])
+    assert "scan_start_page" in vanced
+    assert "scan_dns_servers" not in vanced
+    assert "scan_dns_servers" in extended
+
+
+def test_remove_one_dns_and_start_page_dispatch(monkeypatch):
+    import products_detect
+    calls = []
+    monkeypatch.setattr(
+        products_detect, "remove_dns",
+        lambda finding: calls.append("dns") or True,
+    )
+    removed: list[str] = []
+    failed: list[str] = []
+    yandex_detect._remove_one("DNS: Ethernet (index 14, 77.88.8.8)", removed, failed)
+    assert calls == ["dns"]
+    assert removed == ["Ethernet (index 14, 77.88.8.8)"]
+    assert failed == []
+
+
+def test_consent_prefixes_cover_dns():
+    assert "DNS: " in yandex_detect.CONSENT_PREFIXES
