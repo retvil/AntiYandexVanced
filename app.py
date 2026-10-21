@@ -24,7 +24,7 @@ import profiles
 import translations
 import yandex_detect
 
-APP_VERSION = "2.6.0"
+APP_VERSION = "2.7.0"
 APP_AUTHOR = "Nod33Eset"
 GITHUB_URL = "https://github.com/retvil/AntiYandexVanced"
 
