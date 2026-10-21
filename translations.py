@@ -75,6 +75,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Ничего не выбрано",
         "exclusions_saved": "Исключения обновлены: {} шт.",
         "exclusions_cleared": "Исключения сброшены",
+        "consent_confirm": "Выбранные пункты содержат пользовательские данные (файлы Яндекс.Диска, история Punto Switcher, расширения, куки, исключения антивируса). Удалить их безвозвратно?",
     },
     "en": {
         "title": "Remove Yandex",
@@ -130,6 +131,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Nothing selected",
         "exclusions_saved": "Exclusions updated: {} item(s)",
         "exclusions_cleared": "Exclusions cleared",
+        "consent_confirm": "Selected items contain user data (Yandex Disk files, Punto Switcher history, extensions, cookies, antivirus exclusions). Delete them permanently?",
     },
     "uk": {
         "title": "Видалення Яндекс",
@@ -185,6 +187,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Нічого не позначено",
         "exclusions_saved": "Винятки оновлено: {} шт.",
         "exclusions_cleared": "Винятки скинуто",
+        "consent_confirm": "Позначені пункти містять користувацькі дані (файли Яндекс.Диска, історія Punto Switcher, розширення, куки, винятки антивірусу). Видалити їх безповоротно?",
     },
     "kk": {
         "title": "Яндекс Браузерді жою",
@@ -240,6 +243,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Ештеңе белгіленбеген",
         "exclusions_saved": "Ерекшеліктер жаңартылды: {} дана",
         "exclusions_cleared": "Ерекшеліктер қалпына келтірілді",
+        "consent_confirm": "Белгіленген элементтерде пайдаланушы деректері бар (Yandex Disk файлдары, Punto Switcher тарихы, кеңейтулер, cookie файлдары, антивирус ерекшеліктері). Оларды қайтарылмайтын түрде жою керек пе?",
     },
     "de": {
         "title": "Yandex-Entferner",
@@ -295,6 +299,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Nichts ausgewählt",
         "exclusions_saved": "Ausschlüsse aktualisiert: {} Element(e)",
         "exclusions_cleared": "Ausschlüsse zurückgesetzt",
+        "consent_confirm": "Die ausgewählten Elemente enthalten Benutzerdaten (Yandex-Disk-Dateien, Punto-Switcher-Verlauf, Erweiterungen, Cookies, Antivirus-Ausschlüsse). Endgültig löschen?",
     },
     "fr": {
         "title": "Suppression de Yandex",
@@ -350,6 +355,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Rien n'est sélectionné",
         "exclusions_saved": "Exclusions mises à jour : {} élément(s)",
         "exclusions_cleared": "Exclusions réinitialisées",
+        "consent_confirm": "Les éléments sélectionnés contiennent des données utilisateur (fichiers Yandex Disk, historique Punto Switcher, extensions, cookies, exclusions antivirus). Les supprimer définitivement ?",
     },
     "es": {
         "title": "Eliminador de Yandex",
@@ -405,6 +411,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Nada seleccionado",
         "exclusions_saved": "Exclusiones actualizadas: {} elemento(s)",
         "exclusions_cleared": "Exclusiones restablecidas",
+        "consent_confirm": "Los elementos seleccionados contienen datos del usuario (archivos de Yandex Disk, historial de Punto Switcher, extensiones, cookies, exclusiones del antivirus). ¿Eliminarlos permanentemente?",
     },
     "pl": {
         "title": "Usuwanie Yandex",
@@ -460,6 +467,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Nic nie zaznaczono",
         "exclusions_saved": "Wyjątki zaktualizowane: {} szt.",
         "exclusions_cleared": "Wyjątki zresetowane",
+        "consent_confirm": "Zaznaczone elementy zawierają dane użytkownika (pliki Yandex Disk, historia Punto Switcher, rozszerzenia, ciasteczka, wyjątki antywirusa). Usunąć je bezpowrotnie?",
     },
     "tr": {
         "title": "Yandex Kaldırıcı",
@@ -515,6 +523,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "Hiçbir şey seçilmedi",
         "exclusions_saved": "İstisnalar güncellendi: {} adet",
         "exclusions_cleared": "İstisnalar sıfırlandı",
+        "consent_confirm": "Seçili öğeler kullanıcı verileri içeriyor (Yandex Disk dosyaları, Punto Switcher geçmişi, eklentiler, çerezler, antivirüs istisnaları). Kalıcı olarak silinsin mi?",
     },
     "zh": {
         "title": "Yandex 移除工具",
@@ -570,6 +579,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "select_none": "未选择任何内容",
         "exclusions_saved": "排除列表已更新：{} 项",
         "exclusions_cleared": "排除列表已重置",
+        "consent_confirm": "所选项目包含用户数据（Yandex Disk 文件、Punto Switcher 历史、扩展、Cookie、杀毒软件排除项）。要永久删除吗？",
     },
 }
 

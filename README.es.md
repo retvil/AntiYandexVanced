@@ -2,19 +2,19 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**Elimina por completo Yandex Browser y bloquea tu buscador predeterminado contra el secuestro — 15 vectores de detección, 10 buscadores, 10 idiomas de interfaz.**
+**Elimina por completo Yandex Browser y bloquea tu buscador predeterminado contra el secuestro — 30 vectores de detección, 10 buscadores, 10 idiomas de interfaz.**
 
 [🇬🇧 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇰🇿 Қазақша](README.kk.md) | [🇩🇪 Deutsch](README.de.md) | [🇫🇷 Français](README.fr.md) | **🇪🇸 Español** | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | [🇨🇳 中文](README.zh.md)
 
 ## ¿Qué es esto?
 
-Yandex no instala solo un navegador — se registra silenciosamente como buscador y navegador predeterminado a través de quince mecanismos del sistema: asociaciones en el registro, políticas de empresa, ajustes de perfiles de navegadores, incluso bases de datos de buscadores dentro de los perfiles Chromium. Eliminar el navegador por sí solo no deshace todo eso.
+Yandex no instala solo un navegador — se registra silenciosamente como buscador y navegador predeterminado a través de treinta mecanismos del sistema: asociaciones en el registro, políticas de empresa, ajustes de perfiles de navegadores, incluso bases de datos de buscadores dentro de los perfiles Chromium. Eliminar el navegador por sí solo no deshace todo eso.
 
-**AntiYandex Vanced** (un fork de [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) encuentra **los 15 vectores de secuestro**, los elimina con un clic y luego **bloquea tu buscador predeterminado** al motor que elijas mediante políticas de empresa de Windows — para que nada pueda recuperarlo silenciosamente.
+**AntiYandex Vanced** (un fork de [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) encuentra **los 30 vectores de secuestro**, los elimina con un clic y luego **bloquea tu buscador predeterminado** al motor que elijas mediante políticas de empresa de Windows — para que nada pueda recuperarlo silenciosamente.
 
 ## Características
 
-- **Escáner de secuestros** — detecta 15 vectores: rutas de instalación, entradas Uninstall del registro, asociación `UserChoice`, registros `StartMenuInternet`, árboles de claves `Software\Yandex`, secuestro vía políticas `DefaultSearchProvider*`, `Preferences` de perfiles Chromium, palabras clave en `Web Data` (SQLite), `search.json.mozlz4` de Firefox, `SearchScopes` legacy, entradas de autostart, tareas programadas, servicios de Windows, Punto Switcher, asociaciones de archivos
+- **Escáner de secuestros** — detecta 30 vectores: rutas de instalación, entradas Uninstall del registro, asociación `UserChoice`, registros `StartMenuInternet`, árboles de claves `Software\Yandex`, secuestro vía políticas `DefaultSearchProvider*`, `Preferences` de perfiles Chromium, palabras clave en `Web Data` (SQLite), `search.json.mozlz4` de Firefox, `SearchScopes` legacy, entradas de autostart, tareas programadas, servicios de Windows, Punto Switcher, asociaciones de archivos, integración de shell de Yandex Disk, autostart deshabilitado, App Paths, accesos directos, restos en ProgramData/Roaming, entradas de hosts, reglas de firewall, protocolos URI, extensiones de navegador, cookies de yandex.ru, asociaciones «Abrir con», rastros Prefetch/WER, exclusiones de Defender, distribuciones de teclado
 - **Eliminación con un clic** — cada vector tiene su propio remover; las bases bloqueadas se reportan honestamente, sin crashes
 - **Política estricta de búsqueda** — bloquea el buscador predeterminado a uno de 10 motores (Google, Bing, DuckDuckGo, Brave Search, Startpage, Mojeek, Qwant, Ecosia, Yahoo, SearXNG) vía políticas HKLM para Chrome, Edge, Brave, Vivaldi, Opera y Yandex Browser + `policies.json` para Firefox/Waterfox
 - **Limpieza de políticas** — purga los valores `DefaultSearchProvider*` de Yandex del registro

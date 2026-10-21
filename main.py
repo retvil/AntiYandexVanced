@@ -262,6 +262,9 @@ def _open_selection_dialog(findings: list[str]) -> None:
         if not selected:
             messagebox.showinfo(t("select_title"), t("select_none"), parent=dialog)
             return
+        if any(f.startswith(yandex_detect.CONSENT_PREFIXES) for f in selected):
+            if not messagebox.askyesno(t("title"), t("consent_confirm"), parent=dialog):
+                return
         running = _running_browsers()
         if running and not messagebox.askyesno(t("title"), t("close_browsers_confirm")):
             return

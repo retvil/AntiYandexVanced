@@ -146,3 +146,62 @@ def test_exclusions_load_corrupt_file_returns_empty(tmp_path, monkeypatch):
     bad.write_text("{not json", encoding="utf-8")
     monkeypatch.setattr(exclusions, "EXCLUSIONS_FILE", bad)
     assert exclusions.load() == set()
+
+
+# --- extended vectors (16-30) ---------------------------------------------------
+
+def test_lnk_mentions_yandex_ascii_and_utf16(tmp_path):
+    import yandex_detect
+    plain = tmp_path / "plain.lnk"
+    plain.write_bytes(b"\x00\x01chrome" + b"\x00" * 32)
+    assert not yandex_detect._lnk_mentions_yandex(plain)
+    ascii_lnk = tmp_path / "ascii.lnk"
+    ascii_lnk.write_bytes(b"\x00\x01" + b"C:\\Yandex\\browser.exe" + b"\x00" * 8)
+    assert yandex_detect._lnk_mentions_yandex(ascii_lnk)
+    utf16_lnk = tmp_path / "utf16.lnk"
+    utf16_lnk.write_bytes(b"\x00\x01" + "Яндекс.Браузер".encode("utf-16-le"))
+    assert yandex_detect._lnk_mentions_yandex(utf16_lnk)
+
+
+def test_hosts_yandex_lines_skips_comments_and_other_domains():
+    text = "\n".join([
+        "# comment yandex.ru",
+        "127.0.0.1 yandex.ru",
+        "  0.0.0.0 ya.ru  ",
+        "1.2.3.4 google.com",
+        "",
+    ])
+    lines = yandex_detect._hosts_yandex_lines(text)
+    assert lines == ["127.0.0.1 yandex.ru", "0.0.0.0 ya.ru"]
+
+
+def test_parse_firewall_output():
+    text = "\nRule1|Display One\n\nRule2|Display Two\n|\n"
+    assert yandex_detect._parse_firewall_output(text) == [
+        ("Rule1", "Display One"),
+        ("Rule2", "Display Two"),
+    ]
+
+
+def test_consent_prefixes_cover_consent_findings():
+    samples = [
+        "Roaming: C:\\Users\\X\\AppData\\Roaming\\Yandex",
+        "YandexDisk data: C:\\Users\\X\\AppData\\Local\\Yandex\\YandexDisk2",
+        "YandexDisk files: C:\\Users\\X\\YandexDisk",
+        "Extension: C:\\Users\\X\\...\\Extensions\\abc",
+        "Cookies: Google Chrome [Default] (3 rows)",
+        "Defender exclusion: C:\\Yandex",
+    ]
+    for sample in samples:
+        assert sample.startswith(yandex_detect.CONSENT_PREFIXES), sample
+
+
+def test_new_scan_functions_return_lists():
+    for name in (
+        "scan_shell_overlays", "scan_context_menus", "scan_startup_approved",
+        "scan_app_paths", "scan_shortcuts", "scan_leftover_dirs", "scan_hosts",
+        "scan_firewall_rules", "scan_uri_protocols", "scan_browser_extensions",
+        "scan_cookies", "scan_openwith", "scan_traces",
+        "scan_defender_exclusions", "scan_keyboard_layouts",
+    ):
+        assert isinstance(getattr(yandex_detect, name)(), list), name

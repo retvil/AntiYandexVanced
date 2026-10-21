@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 16th–30th hijack vectors: Yandex Disk shell integration (icon overlays +
+  context-menu handlers), disabled autostart (`StartupApproved`), `App Paths`,
+  shortcuts (Desktop / Start Menu / taskbar), leftover directories
+  (ProgramData, Roaming, Yandex Disk data and synced files), `hosts` entries,
+  Windows Firewall rules, URI protocol handlers, browser extensions
+  (Chromium manifests + Firefox `.xpi`), yandex.ru cookies (Chromium +
+  Firefox), `OpenWithProgids`/`OpenWithList` associations, Prefetch /
+  CrashDumps / WER traces, Windows Defender exclusions, custom keyboard
+  layouts (Yandex IME)
+- Consent confirmation: findings that touch user data (Yandex Disk files,
+  Punto Switcher history, extensions, cookies, Defender exclusions) require
+  an explicit extra confirmation before removal
+- Unit tests for `.lnk` byte detection, hosts-line filtering, firewall output
+  parsing and consent-prefix coverage
+
 ## [2.3.0] - 2026-10-20
 
 ### Added

@@ -2,19 +2,19 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**彻底移除 Yandex 浏览器，并硬性锁定默认搜索引擎以防劫持 — 15 个检测向量、10 个搜索引擎、10 种界面语言。**
+**彻底移除 Yandex 浏览器，并硬性锁定默认搜索引擎以防劫持 — 30 个检测向量、10 个搜索引擎、10 种界面语言。**
 
 [🇬🇧 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇰🇿 Қазақша](README.kk.md) | [🇩🇪 Deutsch](README.de.md) | [🇫🇷 Français](README.fr.md) | [🇪🇸 Español](README.es.md) | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | **🇨🇳 中文**
 
 ## 这是什么？
 
-Yandex 安装的不只是一个浏览器 — 它通过十五种不同的系统机制悄悄把自己注册为默认搜索和默认浏览器：注册表关联、企业策略、浏览器配置文件设置，甚至 Chromium 配置文件内部的搜索引擎数据库。仅删除浏览器并不能撤销这一切。
+Yandex 安装的不只是一个浏览器 — 它通过三十种不同的系统机制悄悄把自己注册为默认搜索和默认浏览器：注册表关联、企业策略、浏览器配置文件设置，甚至 Chromium 配置文件内部的搜索引擎数据库。仅删除浏览器并不能撤销这一切。
 
-**AntiYandex Vanced**（[TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) 的 fork）会找出**全部 15 个劫持向量**，一键清除它们，然后通过 Windows 企业策略**将默认搜索硬性锁定**到你选择的搜索引擎 — 让任何东西都无法悄悄改回去。
+**AntiYandex Vanced**（[TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) 的 fork）会找出**全部 30 个劫持向量**，一键清除它们，然后通过 Windows 企业策略**将默认搜索硬性锁定**到你选择的搜索引擎 — 让任何东西都无法悄悄改回去。
 
 ## 功能
 
-- **劫持扫描器** — 检测 15 个向量：安装路径、注册表 Uninstall 项、`UserChoice` 关联、`StartMenuInternet` 注册、`Software\Yandex` 键树、通过 `DefaultSearchProvider*` 策略的劫持、Chromium 配置文件的 `Preferences`、`Web Data`（SQLite）关键词、Firefox `search.json.mozlz4`、旧版 `SearchScopes`、自启动项、计划任务、Windows 服务、Punto Switcher、文件关联
+- **劫持扫描器** — 检测 30 个向量：安装路径、注册表 Uninstall 项、`UserChoice` 关联、`StartMenuInternet` 注册、`Software\Yandex` 键树、通过 `DefaultSearchProvider*` 策略的劫持、Chromium 配置文件的 `Preferences`、`Web Data`（SQLite）关键词、Firefox `search.json.mozlz4`、旧版 `SearchScopes`、自启动项、计划任务、Windows 服务、Punto Switcher、文件关联
 - **一键清除** — 每个向量都有专属 remover；被锁定的数据库会如实报告，不会崩溃
 - **硬性搜索策略** — 通过 HKLM 策略（Chrome、Edge、Brave、Vivaldi、Opera 和 Yandex 浏览器）以及 Firefox/Waterfox 的 `policies.json`，将默认搜索锁定为 10 个搜索引擎之一（Google、Bing、DuckDuckGo、Brave Search、Startpage、Mojeek、Qwant、Ecosia、Yahoo、SearXNG）
 - **策略清理** — 从注册表中清除 Yandex 的 `DefaultSearchProvider*` 值

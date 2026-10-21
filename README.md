@@ -2,19 +2,19 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**Remove Yandex Browser completely and lock your default search against hijacking — 15 detection vectors, 10 search engines, 10 UI languages.**
+**Remove Yandex Browser completely and lock your default search against hijacking — 30 detection vectors, 10 search engines, 10 UI languages.**
 
 **🇬🇧 English** | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | [🇰🇿 Қазақша](README.kk.md) | [🇩🇪 Deutsch](README.de.md) | [🇫🇷 Français](README.fr.md) | [🇪🇸 Español](README.es.md) | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | [🇨🇳 中文](README.zh.md)
 
 ## What is this?
 
-Yandex doesn't just install a browser — it quietly registers itself as the default search and browser through fifteen different system mechanisms: registry associations, enterprise policies, per-profile browser settings, even search-engine databases inside Chromium profiles. Removing the browser alone doesn't undo all of that.
+Yandex doesn't just install a browser — it quietly registers itself as the default search and browser through thirty different system mechanisms: registry associations, enterprise policies, per-profile browser settings, even search-engine databases inside Chromium profiles. Removing the browser alone doesn't undo all of that.
 
-**AntiYandex Vanced** (a fork of [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) finds **all 15 hijack vectors**, removes them with one click, and then **hard-locks your default search** to an engine of your choice via Windows enterprise policies — so nothing can silently take it back.
+**AntiYandex Vanced** (a fork of [TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex)) finds **all 30 hijack vectors**, removes them with one click, and then **hard-locks your default search** to an engine of your choice via Windows enterprise policies — so nothing can silently take it back.
 
 ## Features
 
-- **Hijack scanner** — detects 15 vectors: install paths, uninstall registry entries, `UserChoice` default-browser association, `StartMenuInternet` registrations, `Software\Yandex` key trees, `DefaultSearchProvider*` policy hijack, Chromium profile `Preferences`, `Web Data` SQLite keywords, Firefox `search.json.mozlz4`, legacy `SearchScopes`, autostart entries, scheduled tasks, Windows services, Punto Switcher, file associations
+- **Hijack scanner** — detects 30 vectors: install paths, uninstall registry entries, `UserChoice` default-browser association, `StartMenuInternet` registrations, `Software\Yandex` key trees, `DefaultSearchProvider*` policy hijack, Chromium profile `Preferences`, `Web Data` SQLite keywords, Firefox `search.json.mozlz4`, legacy `SearchScopes`, autostart entries, scheduled tasks, Windows services, Punto Switcher, file associations, Yandex Disk shell integration, disabled autostart, App Paths, shortcuts, ProgramData/Roaming leftovers, hosts entries, firewall rules, URI protocols, browser extensions, yandex.ru cookies, open-with associations, Prefetch/WER traces, Defender exclusions, keyboard layouts
 - **One-click removal** — every detected vector is removed with a dedicated remover; locked databases are reported, never crash
 - **Hard search policy** — locks the default search to one of 10 engines (Google, Bing, DuckDuckGo, Brave Search, Startpage, Mojeek, Qwant, Ecosia, Yahoo, SearXNG) via HKLM policies for Chrome, Edge, Brave, Vivaldi, Opera and Yandex Browser, plus `policies.json` for Firefox/Waterfox
 - **Policy cleanup** — strips Yandex `DefaultSearchProvider*` values from the registry

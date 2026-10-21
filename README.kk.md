@@ -2,19 +2,19 @@
 
 [![Release](https://img.shields.io/github/v/release/retvil/AntiYandexVanced?sort=date)](https://github.com/retvil/AntiYandexVanced/releases) [![Platform Windows](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/retvil/AntiYandexVanced/releases) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**Yandex Browser-ді толық жою және әдепкі іздеуді ұрлаудан қатаң қорғау — 15 детект векторы, 10 іздеу жүйесі, 10 интерфейс тілі.**
+**Yandex Browser-ді толық жою және әдепкі іздеуді ұрлаудан қатаң қорғау — 30 детект векторы, 10 іздеу жүйесі, 10 интерфейс тілі.**
 
 [🇬🇧 English](README.md) | [🇷🇺 Русский](README.ru.md) | [🇺🇦 Українська](README.uk.md) | **🇰🇿 Қазақша** | [🇩🇪 Deutsch](README.de.md) | [🇫🇷 Français](README.fr.md) | [🇪🇸 Español](README.es.md) | [🇵🇱 Polski](README.pl.md) | [🇹🇷 Türkçe](README.tr.md) | [🇨🇳 中文](README.zh.md)
 
 ## Бұл не?
 
-Yandex жай ғана браузер орнатпайды — ол жүйенің он бес әртүрлі механизмі арқылы әдепкі іздеу/браузер болып үнсіз тіркеледі: реестр ассоциациялары, enterprise-саясаттар, браузер профильдерінің параметрлері, тіпті Chromium профильдеріндегі іздеу жүйелерінің базалары. Бір браузерді жою мұның бәрін жоймайды.
+Yandex жай ғана браузер орнатпайды — ол жүйенің отыз әртүрлі механизмі арқылы әдепкі іздеу/браузер болып үнсіз тіркеледі: реестр ассоциациялары, enterprise-саясаттар, браузер профильдерінің параметрлері, тіпті Chromium профильдеріндегі іздеу жүйелерінің базалары. Бір браузерді жою мұның бәрін жоймайды.
 
-**AntiYandex Vanced** ([TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) форкі) **барлық 15 ұрлау векторын** табады, бір батырмамен алып тастайды, содан кейін әдепкі іздеуді таңдаған іздеу жүйеңізге Windows enterprise-саясаттары арқылы **қатайтып бекітеді** — ештеңе үнсіз қайтарып алмас үшін.
+**AntiYandex Vanced** ([TheCawa/AntiYandex](https://github.com/TheCawa/AntiYandex) форкі) **барлық 30 ұрлау векторын** табады, бір батырмамен алып тастайды, содан кейін әдепкі іздеуді таңдаған іздеу жүйеңізге Windows enterprise-саясаттары арқылы **қатайтып бекітеді** — ештеңе үнсіз қайтарып алмас үшін.
 
 ## Мүмкіндіктер
 
-- **Ұрлау сканері** — 15 векторды анықтау: орнату жолдары, реестрдегі Uninstall жазбалары, `UserChoice` ассоциациясы, `StartMenuInternet` тіркелулері, `Software\Yandex` кілттер ағаштары, `DefaultSearchProvider*` саясаттары арқылы ұрлау, Chromium профильдерінің `Preferences` параметрлері, `Web Data` (SQLite) кілт сөздері, Firefox `search.json.mozlz4`, legacy `SearchScopes`, автозапуск, тапсырмалар жоспарлаушы, Windows қызметтері, Punto Switcher, файлдық байланыстырулар
+- **Ұрлау сканері** — 30 векторды анықтау: орнату жолдары, реестрдегі Uninstall жазбалары, `UserChoice` ассоциациясы, `StartMenuInternet` тіркелулері, `Software\Yandex` кілттер ағаштары, `DefaultSearchProvider*` саясаттары арқылы ұрлау, Chromium профильдерінің `Preferences` параметрлері, `Web Data` (SQLite) кілт сөздері, Firefox `search.json.mozlz4`, legacy `SearchScopes`, автозапуск, тапсырмалар жоспарлаушы, Windows қызметтері, Punto Switcher, файлдық байланыстырулар, Yandex Disk интеграциясы, өшірілген автозапуск, App Paths, жарлықтар, ProgramData/Roaming қалдықтары, hosts жазбалары, брандмауэр ережелері, URI-протоколдар, браузер кеңейтулері, yandex.ru cookie файлдары, «көмегімен ашу» ассоциациялары, Prefetch/WER іздері, Defender ерекшеліктері, пернетақта орналасулары
 - **Бір батырмамен жою** — әр вектордың өз remover-ы бар; бұғатталған базалар шынайы репортталады, крашсыз
 - **Қатаң іздеу саясаты** — іздеуді 10 іздеу жүйесінің біреуіне (Google, Bing, DuckDuckGo, Brave Search, Startpage, Mojeek, Qwant, Ecosia, Yahoo, SearXNG) бекітеді: Chrome, Edge, Brave, Vivaldi, Opera және Яндекс Browser үшін HKLM-саясаттар + Firefox/Waterfox үшін `policies.json`
 - **Саясат тазарту** — Яндекс `DefaultSearchProvider*` мәндерін реестрден тазартады

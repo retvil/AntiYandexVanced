@@ -13,6 +13,7 @@ import sqlite3
 import struct
 import subprocess
 import winreg
+import zipfile
 from pathlib import Path
 
 import backup
@@ -114,6 +115,36 @@ def _reg_get_string(hive: int, path: str, value_name: str) -> str | None:
             return value if isinstance(value, str) else None
     except OSError:
         return None
+
+
+def _reg_enum_value_names(hive: int, path: str) -> list[str]:
+    """Value names of any type (unlike _reg_enum_values, which keeps strings only)."""
+    try:
+        with winreg.OpenKey(hive, path, 0, winreg.KEY_READ) as key:
+            names = []
+            i = 0
+            while True:
+                try:
+                    names.append(winreg.EnumValue(key, i)[0])
+                    i += 1
+                except OSError:
+                    break
+            return names
+    except OSError:
+        return []
+
+
+def _ps_run(script: str) -> str:
+    """Run a PowerShell snippet and return its stdout decoded as UTF-8."""
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return proc.stdout.decode("utf-8", errors="replace")
 
 
 def scan_install_paths() -> list[str]:
@@ -414,6 +445,408 @@ def remove_file_association(ext: str) -> bool:
         return False
 
 
+# --- Extended vectors (16-30) ---------------------------------------------------
+# Findings with a prefix from CONSENT_PREFIXES touch user data (files, history,
+# cookies, extensions, antivirus settings) — the GUI asks for extra confirmation.
+
+CONSENT_PREFIXES: tuple[str, ...] = (
+    "Roaming: ",
+    "YandexDisk data: ",
+    "YandexDisk files: ",
+    "Extension: ",
+    "Cookies: ",
+    "Defender exclusion: ",
+)
+
+SHELL_OVERLAY_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers"
+
+_CONTEXT_MENU_PARENTS: tuple[str, ...] = (
+    r"*\shellex\ContextMenuHandlers",
+    r"AllFilesystemObjects\shellex\ContextMenuHandlers",
+    r"Directory\shellex\ContextMenuHandlers",
+    r"Directory\Background\shellex\ContextMenuHandlers",
+    r"Folder\shellex\ContextMenuHandlers",
+)
+
+
+def scan_shell_overlays() -> list[str]:
+    """Explorer icon-overlay handlers registered by Yandex Disk."""
+    found = []
+    for hive in _HIVES:
+        for name in _reg_enum_subkey_names(hive, SHELL_OVERLAY_KEY):
+            if _is_yandex(name):
+                found.append(f"Shell overlay: {SHELL_OVERLAY_KEY}\\{name}")
+    return found
+
+
+def scan_context_menus() -> list[str]:
+    """Explorer context-menu handlers registered by Yandex Disk."""
+    found = []
+    for parent in _CONTEXT_MENU_PARENTS:
+        rel_parent = f"SOFTWARE\\Classes\\{parent}"
+        for hive in _HIVES:
+            for name in _reg_enum_subkey_names(hive, rel_parent):
+                clsid = _reg_get_string(hive, f"{rel_parent}\\{name}", "") or ""
+                if _is_yandex(f"{name} {clsid}"):
+                    found.append(f"Context menu: {rel_parent}\\{name}")
+    return found
+
+
+STARTUP_APPROVED_KEYS: tuple[str, ...] = (
+    r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run",
+    r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32",
+    r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder",
+)
+
+
+def scan_startup_approved() -> list[str]:
+    """Autostart entries that are disabled but still registered."""
+    found = []
+    for hive in _HIVES:
+        for path in STARTUP_APPROVED_KEYS:
+            for name in _reg_enum_value_names(hive, path):
+                if _is_yandex(name):
+                    found.append(f"StartupApproved: {path}\\{name}")
+    return found
+
+
+def scan_app_paths() -> list[str]:
+    """App Paths registrations letting Yandex binaries launch by name."""
+    found = []
+    base = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths"
+    for hive in _HIVES:
+        for subkey in _reg_enum_subkey_names(hive, base):
+            default = _reg_get_string(hive, f"{base}\\{subkey}", "") or ""
+            if _is_yandex(f"{subkey} {default}"):
+                found.append(f"App Paths: {base}\\{subkey}")
+    return found
+
+
+def _shortcut_dirs() -> list[Path]:
+    return [
+        Path(os.environ.get("USERPROFILE", "")) / "Desktop",
+        Path(os.environ.get("APPDATA", "")) / r"Microsoft\Windows\Start Menu",
+        Path(r"C:\ProgramData\Microsoft\Windows\Start Menu"),
+        Path(os.environ.get("APPDATA", ""))
+        / r"Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar",
+    ]
+
+
+def _lnk_mentions_yandex(path: Path) -> bool:
+    """True if .lnk bytes mention Yandex (ASCII or UTF-16 target string)."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    if b"yandex" in data.lower():
+        return True
+    return any(
+        word.encode("utf-16-le") in data
+        for word in ("yandex", "Yandex", "яндекс", "Яндекс")
+    )
+
+
+def scan_shortcuts() -> list[str]:
+    """Shortcuts to Yandex apps on Desktop, Start Menu and taskbar."""
+    found = []
+    for directory in _shortcut_dirs():
+        if not directory.is_dir():
+            continue
+        for lnk in directory.rglob("*.lnk"):
+            if _is_yandex(lnk.stem) or _lnk_mentions_yandex(lnk):
+                found.append(f"Shortcut: {lnk}")
+    return found
+
+
+def scan_leftover_dirs() -> list[str]:
+    """Leftover Yandex data directories (ProgramData, Roaming, Yandex Disk).
+
+    Roaming/Yandex holds Punto Switcher history and diary; YandexDisk holds
+    the user's synced files — both require explicit consent before removal.
+    """
+    found = []
+    programdata = os.environ.get("ProgramData", r"C:\ProgramData")
+    for entry in Path(programdata).glob("Yandex*"):
+        if entry.is_dir():
+            found.append(f"ProgramData: {entry}")
+    roaming = Path(os.environ.get("APPDATA", "")) / "Yandex"
+    if roaming.is_dir():
+        found.append(f"Roaming: {roaming}")
+    disk_cache = Path(os.environ.get("LOCALAPPDATA", "")) / "Yandex" / "YandexDisk2"
+    if disk_cache.is_dir():
+        found.append(f"YandexDisk data: {disk_cache}")
+    disk_files = Path(os.environ.get("USERPROFILE", "")) / "YandexDisk"
+    if disk_files.is_dir():
+        found.append(f"YandexDisk files: {disk_files}")
+    return found
+
+
+HOSTS_FILE = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "drivers" / "etc" / "hosts"
+
+
+def _hosts_yandex_lines(text: str) -> list[str]:
+    """Non-comment hosts lines mentioning Yandex (pure function, testable)."""
+    result = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and _is_yandex(stripped):
+            result.append(stripped)
+    return result
+
+
+def scan_hosts() -> list[str]:
+    """hosts-file entries redirecting or blocking Yandex domains."""
+    try:
+        text = HOSTS_FILE.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = HOSTS_FILE.read_text(encoding="cp1251")
+        except OSError:
+            return []
+    except OSError:
+        return []
+    return [f"Hosts: {line}" for line in _hosts_yandex_lines(text)]
+
+
+def _parse_firewall_output(text: str) -> list[tuple[str, str]]:
+    """Parse 'name|display' lines produced by the firewall scan script."""
+    result = []
+    for line in text.splitlines():
+        line = line.strip()
+        if "|" in line and line != "|":
+            name, _, display = line.partition("|")
+            result.append((name, display))
+    return result
+
+
+_FIREWALL_SCAN_PS = (
+    "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+    "Get-NetFirewallRule | ForEach-Object {"
+    " $n=$_.Name; $d=$_.DisplayName;"
+    " if (($n + ' ' + $d) -match 'yandex|яндекс') { \"$n|$d\" } }"
+)
+
+
+def scan_firewall_rules() -> list[str]:
+    """Windows Firewall rules created for Yandex components."""
+    text = _ps_run(_FIREWALL_SCAN_PS)
+    return [
+        f"Firewall rule: {name} ({display})"
+        for name, display in _parse_firewall_output(text)
+    ]
+
+
+def scan_uri_protocols() -> list[str]:
+    """URI protocol handlers registered by Yandex (yandexdisk://, ya://, ProgIDs)."""
+    found = []
+    for name in _reg_enum_subkey_names(winreg.HKEY_CLASSES_ROOT, ""):
+        if _is_yandex(name) or name.lower() == "ya":
+            found.append(f"Protocol: SOFTWARE\\Classes\\{name}")
+    return found
+
+
+def _chromium_profile_dirs() -> list[tuple[str, Path]]:
+    """(browser, profile_dir) pairs for every existing Chromium profile."""
+    result = []
+    local = os.environ.get("LOCALAPPDATA", "")
+    for browser, rel in CHROMIUM_BROWSERS.items():
+        user_data = Path(local) / rel
+        if not user_data.is_dir():
+            continue
+        for profile_dir in user_data.iterdir():
+            if profile_dir.is_dir():
+                result.append((browser, profile_dir))
+    return result
+
+
+def _firefox_profile_dirs() -> list[Path]:
+    result = []
+    for root in (
+        Path(os.environ.get("APPDATA", "")) / "Mozilla" / "Firefox" / "Profiles",
+        Path(os.environ.get("APPDATA", "")) / "Waterfox" / "Profiles",
+    ):
+        if root.is_dir():
+            for profile_dir in root.iterdir():
+                if profile_dir.is_dir():
+                    result.append(profile_dir)
+    return result
+
+
+def scan_browser_extensions() -> list[str]:
+    """Browser extensions whose manifest mentions Yandex (consent required)."""
+    found = []
+    for _browser, profile_dir in _chromium_profile_dirs():
+        extensions_dir = profile_dir / "Extensions"
+        if not extensions_dir.is_dir():
+            continue
+        for ext_dir in extensions_dir.iterdir():
+            if not ext_dir.is_dir():
+                continue
+            for version_dir in ext_dir.iterdir():
+                manifest = version_dir / "manifest.json"
+                if not manifest.is_file():
+                    continue
+                try:
+                    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if _is_yandex(str(manifest_data.get("name", ""))):
+                    found.append(f"Extension: {ext_dir}")
+                    break
+    for profile_dir in _firefox_profile_dirs():
+        extensions_dir = profile_dir / "extensions"
+        if not extensions_dir.is_dir():
+            continue
+        for xpi in extensions_dir.glob("*.xpi"):
+            try:
+                with zipfile.ZipFile(xpi) as archive:
+                    manifest_data = json.loads(archive.read("manifest.json"))
+            except (OSError, zipfile.BadZipFile, KeyError, json.JSONDecodeError):
+                continue
+            if _is_yandex(str(manifest_data.get("name", ""))):
+                found.append(f"Extension: {xpi}")
+    return found
+
+
+_COOKIE_HOSTS: tuple[str, str] = ("%yandex%", "%ya.ru%")
+
+
+def scan_cookies() -> list[str]:
+    """Cookies for yandex.ru domains in browser profiles (consent required)."""
+    found = []
+    for browser, profile_dir in _chromium_profile_dirs():
+        cookies_db = profile_dir / "Network" / "Cookies"
+        if not cookies_db.is_file():
+            cookies_db = profile_dir / "Cookies"
+        if not cookies_db.is_file():
+            continue
+        try:
+            conn = sqlite3.connect(f"file:{cookies_db}?immutable=1", uri=True)
+            count = conn.execute(
+                "SELECT COUNT(*) FROM cookies WHERE host_key LIKE ? OR host_key LIKE ?",
+                _COOKIE_HOSTS,
+            ).fetchone()[0]
+            conn.close()
+        except sqlite3.Error:
+            continue
+        if count:
+            found.append(f"Cookies: {browser} [{profile_dir.name}] ({count} rows)")
+    for profile_dir in _firefox_profile_dirs():
+        cookies_db = profile_dir / "cookies.sqlite"
+        if not cookies_db.is_file():
+            continue
+        try:
+            conn = sqlite3.connect(f"file:{cookies_db}?immutable=1", uri=True)
+            count = conn.execute(
+                "SELECT COUNT(*) FROM moz_cookies WHERE host LIKE ? OR host LIKE ?",
+                _COOKIE_HOSTS,
+            ).fetchone()[0]
+            conn.close()
+        except sqlite3.Error:
+            continue
+        if count:
+            found.append(f"Cookies: Firefox [{profile_dir.name}] ({count} rows)")
+    return found
+
+
+def _cookies_db_path(browser: str, profile_name: str) -> Path | None:
+    """Locate the cookies database for one browser profile."""
+    if browser == "Firefox":
+        for profile_dir in _firefox_profile_dirs():
+            if profile_dir.name == profile_name:
+                return profile_dir / "cookies.sqlite"
+        return None
+    rel = CHROMIUM_BROWSERS.get(browser)
+    if rel is None:
+        return None
+    profile_dir = Path(os.environ.get("LOCALAPPDATA", "")) / rel / profile_name
+    db = profile_dir / "Network" / "Cookies"
+    if db.is_file():
+        return db
+    db = profile_dir / "Cookies"
+    return db if db.is_file() else None
+
+
+def scan_openwith() -> list[str]:
+    """'Open with' associations offering Yandex apps."""
+    found = []
+    for ext in _reg_enum_subkey_names(winreg.HKEY_CURRENT_USER, FILE_EXTS_KEY):
+        ext_path = f"{FILE_EXTS_KEY}\\{ext}"
+        progids_path = f"{ext_path}\\OpenWithProgids"
+        for name in _reg_enum_value_names(winreg.HKEY_CURRENT_USER, progids_path):
+            if _is_yandex(name):
+                found.append(f"OpenWith: {progids_path}\\{name}")
+        list_path = f"{ext_path}\\OpenWithList"
+        for name, value in _reg_enum_values(winreg.HKEY_CURRENT_USER, list_path):
+            if _is_yandex(value):
+                found.append(f"OpenWith: {list_path}\\{name} = {value}")
+    return found
+
+
+def scan_traces() -> list[str]:
+    """Harmless leftover traces: Prefetch, crash dumps, WER reports."""
+    found = []
+    prefetch = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "Prefetch"
+    if prefetch.is_dir():
+        for pf in prefetch.glob("*.pf"):
+            if _is_yandex(pf.stem):
+                found.append(f"Trace: {pf}")
+    crash_dumps = Path(os.environ.get("LOCALAPPDATA", "")) / "CrashDumps"
+    if crash_dumps.is_dir():
+        for entry in crash_dumps.iterdir():
+            if _is_yandex(entry.stem):
+                found.append(f"Trace: {entry}")
+    wer_root = Path(os.environ.get("LOCALAPPDATA", "")) / r"Microsoft\Windows\WER"
+    for sub in ("ReportArchive", "ReportQueue"):
+        directory = wer_root / sub
+        if not directory.is_dir():
+            continue
+        for entry in directory.iterdir():
+            if _is_yandex(entry.name):
+                found.append(f"Trace: {entry}")
+    return found
+
+
+_DEFENDER_SCAN_PS = (
+    "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+    "$p = Get-MpPreference;"
+    "($p.ExclusionPath + $p.ExclusionProcess + $p.ExclusionExtension)"
+    " | Where-Object { $_ -and ($_ -match 'yandex|яндекс') }"
+)
+
+
+def scan_defender_exclusions() -> list[str]:
+    """Windows Defender exclusions added for Yandex (consent required)."""
+    text = _ps_run(_DEFENDER_SCAN_PS)
+    seen: set[str] = set()
+    found = []
+    for line in text.splitlines():
+        item = line.strip()
+        if item and item not in seen:
+            seen.add(item)
+            found.append(f"Defender exclusion: {item}")
+    return found
+
+
+KEYBOARD_LAYOUTS_KEY = r"SYSTEM\CurrentControlSet\Control\Keyboard Layouts"
+
+
+def scan_keyboard_layouts() -> list[str]:
+    """Custom keyboard layouts registered by Yandex IME."""
+    found = []
+    for klid in _reg_enum_subkey_names(winreg.HKEY_LOCAL_MACHINE, KEYBOARD_LAYOUTS_KEY):
+        layout_path = f"{KEYBOARD_LAYOUTS_KEY}\\{klid}"
+        layout_text = (
+            _reg_get_string(winreg.HKEY_LOCAL_MACHINE, layout_path, "Layout Text")
+            or _reg_get_string(winreg.HKEY_LOCAL_MACHINE, layout_path, "Layout Display Name")
+            or ""
+        )
+        layout_file = _reg_get_string(winreg.HKEY_LOCAL_MACHINE, layout_path, "Layout File") or ""
+        if _is_yandex(f"{layout_text} {layout_file}"):
+            found.append(f"Keyboard layout: {klid} ({layout_text or layout_file})")
+    return found
+
+
 def scan_all() -> list[str]:
     """Run every detection vector and return combined findings."""
     findings: list[str] = []
@@ -431,6 +864,21 @@ def scan_all() -> list[str]:
     findings += scan_scheduled_tasks()
     findings += scan_services()
     findings += scan_file_associations()
+    findings += scan_shell_overlays()
+    findings += scan_context_menus()
+    findings += scan_startup_approved()
+    findings += scan_app_paths()
+    findings += scan_shortcuts()
+    findings += scan_leftover_dirs()
+    findings += scan_hosts()
+    findings += scan_firewall_rules()
+    findings += scan_uri_protocols()
+    findings += scan_browser_extensions()
+    findings += scan_cookies()
+    findings += scan_openwith()
+    findings += scan_traces()
+    findings += scan_defender_exclusions()
+    findings += scan_keyboard_layouts()
     return findings
 
 
@@ -849,6 +1297,21 @@ def _remove_firefox_profile(profile_name: str) -> str:
     return ""
 
 
+def _remove_keyboard_layout(klid: str) -> bool:
+    """Unregister one keyboard layout: Preload/Substitutes values + layout key."""
+    ok = True
+    for path in (r"Keyboard Layout\Preload", r"Keyboard Layout\Substitutes"):
+        for name, value in _reg_enum_values(winreg.HKEY_CURRENT_USER, path):
+            if value == klid and not _delete_value_any_hive(path, name):
+                ok = False
+    backup.export_key(winreg.HKEY_LOCAL_MACHINE, f"{KEYBOARD_LAYOUTS_KEY}\\{klid}")
+    try:
+        _reg_delete_tree(winreg.HKEY_LOCAL_MACHINE, f"{KEYBOARD_LAYOUTS_KEY}\\{klid}")
+    except OSError:
+        ok = False
+    return ok
+
+
 def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
     """Remove a single finding; append a description to removed or failed."""
     if finding.startswith("Install path: "):
@@ -858,6 +1321,169 @@ def _remove_one(finding: str, removed: list[str], failed: list[str]) -> None:
             removed.append(target)
         except OSError:
             failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith(("Shell overlay: ", "Context menu: ", "App Paths: ", "Protocol: ")):
+        rel_path = finding.split(": ", 1)[1]
+        if _delete_tree_any_hive(rel_path):
+            removed.append(rel_path)
+        else:
+            failed.append(rel_path)
+        return
+
+    if finding.startswith("StartupApproved: "):
+        left = finding[len("StartupApproved: "):]
+        rel_path, value_name = left.rsplit("\\", 1)
+        if _delete_value_any_hive(rel_path, value_name):
+            removed.append(left)
+        else:
+            failed.append(left)
+        return
+
+    if finding.startswith("Shortcut: "):
+        target = Path(finding.split(": ", 1)[1])
+        backup.copy_file(target)
+        try:
+            target.unlink()
+            removed.append(str(target))
+        except OSError:
+            failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith(("ProgramData: ", "Roaming: ", "YandexDisk data: ", "YandexDisk files: ")):
+        target = Path(finding.split(": ", 1)[1])
+        try:
+            shutil.rmtree(target, ignore_errors=False)
+            removed.append(str(target))
+        except OSError:
+            failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith("Hosts: "):
+        line = finding[len("Hosts: "):]
+        try:
+            try:
+                text = HOSTS_FILE.read_text(encoding="utf-8")
+                encoding = "utf-8"
+            except UnicodeDecodeError:
+                text = HOSTS_FILE.read_text(encoding="cp1251")
+                encoding = "cp1251"
+            backup.copy_file(HOSTS_FILE)
+            drop = set(_hosts_yandex_lines(text))
+            kept = [l for l in text.splitlines() if l.strip() not in drop]
+            HOSTS_FILE.write_text("\n".join(kept) + "\n", encoding=encoding)
+            removed.append(line)
+        except OSError:
+            failed.append(f"{line} (admin required?)")
+        return
+
+    if finding.startswith("Firewall rule: "):
+        name = finding[len("Firewall rule: "):].rsplit(" (", 1)[0]
+        escaped = name.replace("'", "''")
+        script = (
+            "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+            f"Remove-NetFirewallRule -Name '{escaped}'"
+        )
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", script],
+                capture_output=True, timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError):
+            failed.append(f"{name} (admin required?)")
+            return
+        (removed if proc.returncode == 0 else failed).append(name)
+        return
+
+    if finding.startswith("Extension: "):
+        target = Path(finding[len("Extension: "):])
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            removed.append(str(target))
+        except OSError:
+            failed.append(f"{target} (browser running?)")
+        return
+
+    if finding.startswith("Cookies: "):
+        left = finding[len("Cookies: "):]
+        browser, rest = left.split(" [", 1)
+        profile_name = rest.split("]", 1)[0]
+        db = _cookies_db_path(browser, profile_name)
+        if db is None:
+            failed.append(finding)
+            return
+        try:
+            backup.copy_file(db)
+            conn = sqlite3.connect(db)
+            try:
+                if browser == "Firefox":
+                    conn.execute(
+                        "DELETE FROM moz_cookies WHERE host LIKE ? OR host LIKE ?",
+                        _COOKIE_HOSTS,
+                    )
+                else:
+                    conn.execute(
+                        "DELETE FROM cookies WHERE host_key LIKE ? OR host_key LIKE ?",
+                        _COOKIE_HOSTS,
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+            removed.append(left)
+        except (OSError, sqlite3.Error):
+            failed.append(f"{left} (browser running?)")
+        return
+
+    if finding.startswith("OpenWith: "):
+        left = finding[len("OpenWith: "):].split(" = ", 1)[0]
+        rel_path, value_name = left.rsplit("\\", 1)
+        if _delete_value_any_hive(rel_path, value_name):
+            removed.append(left)
+        else:
+            failed.append(left)
+        return
+
+    if finding.startswith("Trace: "):
+        target = Path(finding.split(": ", 1)[1])
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            removed.append(str(target))
+        except OSError:
+            failed.append(f"{target} (locked?)")
+        return
+
+    if finding.startswith("Defender exclusion: "):
+        item = finding[len("Defender exclusion: "):]
+        escaped = item.replace("'", "''")
+        script = (
+            "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+            f"Remove-MpPreference -ExclusionPath '{escaped}'"
+            f" -ExclusionProcess '{escaped}' -ExclusionExtension '{escaped}'"
+            " -ErrorAction SilentlyContinue"
+        )
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", script],
+                capture_output=True, timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError):
+            failed.append(f"{item} (admin required?)")
+            return
+        (removed if proc.returncode == 0 else failed).append(item)
+        return
+
+    if finding.startswith("Keyboard layout: "):
+        klid = finding[len("Keyboard layout: "):].split(" (", 1)[0]
+        if _remove_keyboard_layout(klid):
+            removed.append(klid)
+        else:
+            failed.append(klid)
         return
 
     if finding.startswith("Service: "):
