@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Extended edition**: Store (Appx) app scan — detects Yandex Music, Alice,
+  Messenger and other Yandex Store apps, removes them via `Remove-AppxPackage`
+- **Extended edition**: non-browser product directory scan under
+  `Program Files\Yandex\` (Yandex Disk, Punto Switcher, IME, ...) with
+  backup-before-delete removal
+- **Extended edition**: "Kill Processes" now terminates every Yandex product
+  process (Yandex Disk, Punto Switcher, Store apps), not just the browser
+
 ## [2.5.0] - 2026-10-21
 
 ### Added
