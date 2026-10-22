@@ -287,6 +287,21 @@ def _scan_product_dirs_at(base: str) -> list[str]:
     return found
 
 
+def test_scan_product_dirs_includes_local_programs(tmp_path, monkeypatch):
+    import products_detect
+    programs = tmp_path / "Programs"
+    (programs / "YandexMusic").mkdir(parents=True)
+    (programs / "YandexBrowser").mkdir()
+    (programs / "OtherApp").mkdir()
+    (programs / "Yandex" / "Punto").mkdir(parents=True)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    found = products_detect.scan_product_dirs()
+    assert any(f.endswith("YandexMusic") for f in found)
+    assert any(f.endswith("Punto") for f in found)
+    assert not any("YandexBrowser" in f for f in found)
+    assert not any("OtherApp" in f for f in found)
+
+
 def test_remove_one_store_app_and_product_dir_dispatch(monkeypatch):
     import products_detect
     calls = []

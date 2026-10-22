@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deletes the cache value (exported first)
 - **%TEMP% installer traces** — scan_traces now also reports Yandex installers
   left in the user temp directory
+- **Per-user product dirs** — scan_product_dirs now also covers
+  `%LOCALAPPDATA%\Programs\Yandex*` (legacy Yandex Music / Messenger /
+  Translate desktop installs), browser folder excluded
 - **Vanced process kill by path** — browser-scoped kill now also matches any
   process whose executable lives under a YandexBrowser path (crashpad,
   updater), not only the narrow browser.exe/yandex.exe name list

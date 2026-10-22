@@ -90,11 +90,13 @@ def remove_store_app(finding: str) -> bool:
 
 
 def scan_product_dirs() -> list[str]:
-    """Non-browser Yandex product directories in Program Files.
+    """Non-browser Yandex product directories.
 
-    The browser install path is reported by scan_install_paths as
-    "Install path: ..."; everything else under Yandex\\ (Yandex Disk,
-    Punto Switcher, IME, ...) is reported here.
+    Covers Program Files\\Yandex\\* and per-user installs under
+    %LOCALAPPDATA%\\Programs (legacy Yandex Music / Messenger / Translate
+    desktop apps live there, e.g. Programs\\YandexMusic). The browser install
+    path is reported by scan_install_paths as "Install path: ..."; everything
+    else is reported here.
     """
     found = []
     for base in (
@@ -106,6 +108,22 @@ def scan_product_dirs() -> list[str]:
         for entry in os.listdir(base):
             path = os.path.join(base, entry)
             if os.path.isdir(path) and entry.lower() != "yandexbrowser":
+                found.append(f"Product dir: {path}")
+    local_programs = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")
+    if os.path.isdir(local_programs):
+        for entry in os.listdir(local_programs):
+            low = entry.lower()
+            if not low.startswith("yandex"):
+                continue
+            path = os.path.join(local_programs, entry)
+            if not os.path.isdir(path):
+                continue
+            if low == "yandex":
+                for sub in os.listdir(path):
+                    sub_path = os.path.join(path, sub)
+                    if os.path.isdir(sub_path) and sub.lower() != "yandexbrowser":
+                        found.append(f"Product dir: {sub_path}")
+            elif low != "yandexbrowser":
                 found.append(f"Product dir: {path}")
     return found
 
